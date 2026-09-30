@@ -305,10 +305,41 @@ class ContratoArriendo(models.Model):
 
     usuario = models.ForeignKey(
         Usuario,
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='contratos',
-        verbose_name="Cliente (Empresa Constructora)"
+        verbose_name="Cliente Registrado"
     )
+    # Soporte para Usuario Invitado (Sin Registro) con Carro Temporal
+    es_invitado = models.BooleanField(
+        default=False,
+        verbose_name="¿Es Arriendo de Invitado (Sin Registro)?"
+    )
+    nombre_cliente = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True,
+        verbose_name="Nombre o Razón Social (Invitado)"
+    )
+    rut_cliente = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        verbose_name="RUT Empresa / Persona (Invitado)"
+    )
+    email_cliente = models.EmailField(
+        blank=True,
+        null=True,
+        verbose_name="Correo Electrónico (Invitado)"
+    )
+    telefono_cliente = models.CharField(
+        max_length=30,
+        blank=True,
+        null=True,
+        verbose_name="Teléfono de Contacto (Invitado)"
+    )
+
     estado = models.CharField(
         max_length=20,
         choices=ESTADOS_CHOICES,
@@ -336,7 +367,8 @@ class ContratoArriendo(models.Model):
         ordering = ['-fecha_creacion']
 
     def __str__(self):
-        return f"Contrato #{self.id} - {self.usuario.username} [{self.estado}] - ${self.monto_total}"
+        cliente = self.usuario.username if self.usuario else f"{self.nombre_cliente} (Invitado)"
+        return f"Contrato #{self.id} - {cliente} [{self.estado}] - ${self.monto_total}"
 
 
 # ==============================================================================

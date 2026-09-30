@@ -50,6 +50,7 @@ from .serializers import (
     ContratoArriendoSerializer,
     DetalleContratoSerializer,
     CambioEstadoContratoSerializer,
+    CheckoutInvitadoSerializer,
 )
 from .permissions import (
     EsEjecutivoDeArriendos,
@@ -139,8 +140,8 @@ class MaquinariaViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(tarifa_diaria__lte=tarifa_max)
         if busqueda:
             queryset = queryset.filter(
-                models.Q(nombre__icontains=busqueda) |
-                models.Q(descripcion__icontains=busqueda)
+                Q(nombre__icontains=busqueda) |
+                Q(descripcion__icontains=busqueda)
             )
 
         return queryset
@@ -311,6 +312,105 @@ class CheckoutContratoView(APIView):
         return Response({
             'mensaje': "¡Contrato de arriendo generado y pagado exitosamente!",
             'contrato': serializer.data
+        }, status=status.HTTP_201_CREATED)
+
+
+class CheckoutInvitadoView(APIView):
+    """
+    Endpoint POST /api/contratos/checkout-invitado/
+    Permite a un usuario INVITADO (no registrado) finalizar y pagar su arriendo.
+    Regla de Negocio:
+    - No exige autenticación ni contraseña (sin registro).
+    - El carro del invitado es TEMPORAL (almacenado en el cliente) y NO se persiste en PostgreSQL.
+    - Se validan y solicitan los datos de contacto: nombre, RUT, email y teléfono.
+    - Se procesa bajo @transaction.atomic verificando y descontando el stock en flota.
+    - Se genera el ContratoArriendo (es_invitado=True) y su snapshot en DetalleContrato.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    @transaction.atomic
+    def post(self, request):
+        serializer = CheckoutInvitadoSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        datos = serializer.validated_data
+        items_data = datos['items']
+
+        # 1. Validación de stock con select_for_update para todos los ítems
+        maquinarias_dict = {}
+        for it in items_data:
+            maq_id = it['maquinaria_id']
+            try:
+                maq = Maquinaria.objects.select_for_update().get(id=maq_id)
+            except Maquinaria.DoesNotExist:
+                return Response({'error': f"Maquinaria con ID {maq_id} no existe."}, status=status.HTTP_404_NOT_FOUND)
+
+            if maq.unidades_disponibles < 1:
+                return Response({
+                    'error': f"Stock insuficiente para '{maq.nombre}'. No hay unidades disponibles en flota."
+                }, status=status.HTTP_409_CONFLICT)
+            maquinarias_dict[maq_id] = maq
+
+        # 2. Calcular montos y días
+        monto_total_contrato = Decimal('0.00')
+        detalles_data = []
+
+        for it in items_data:
+            maq = maquinarias_dict[it['maquinaria_id']]
+            f_ini = it['fecha_inicio']
+            f_fin = it['fecha_fin']
+            dias_uso = max(1, (f_fin - f_ini).days)
+
+            tarifa_total = maq.tarifa_diaria * Decimal(dias_uso)
+            costo_item = tarifa_total + maq.garantia_fija
+            monto_total_contrato += costo_item
+
+            detalles_data.append({
+                'maquinaria': maq,
+                'nombre_maquinaria': maq.nombre,
+                'tarifa_diaria': maq.tarifa_diaria,
+                'garantia_fija': maq.garantia_fija,
+                'fecha_inicio': f_ini,
+                'fecha_fin': f_fin,
+                'dias_uso': dias_uso,
+                'subtotal': costo_item,
+            })
+
+        # 3. Crear Contrato de Arriendo en estado PAGADO con bandera es_invitado=True
+        contrato = ContratoArriendo.objects.create(
+            usuario=None,
+            es_invitado=True,
+            nombre_cliente=datos['nombre_cliente'],
+            rut_cliente=datos['rut_cliente'],
+            email_cliente=datos['email_cliente'],
+            telefono_cliente=datos['telefono_cliente'],
+            estado=ContratoArriendo.ESTADO_PAGADO,
+            monto_total=monto_total_contrato
+        )
+
+        # 4. Descuento atómico de stock y creación de DetalleContrato congelado
+        for d in detalles_data:
+            maq = d['maquinaria']
+            maq.unidades_disponibles -= 1
+            maq.save()
+
+            DetalleContrato.objects.create(
+                contrato=contrato,
+                maquinaria=maq,
+                nombre_maquinaria=d['nombre_maquinaria'],
+                tarifa_diaria=d['tarifa_diaria'],
+                garantia_fija=d['garantia_fija'],
+                fecha_inicio=d['fecha_inicio'],
+                fecha_fin=d['fecha_fin'],
+                dias_uso=d['dias_uso'],
+                subtotal=d['subtotal']
+            )
+
+        resp_serializer = ContratoArriendoSerializer(contrato)
+        return Response({
+            'mensaje': "¡Arriendo confirmado y pagado exitosamente en modalidad invitado!",
+            'contrato': resp_serializer.data
         }, status=status.HTTP_201_CREATED)
 
 

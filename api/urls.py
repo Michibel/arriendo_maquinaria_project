@@ -31,6 +31,7 @@ from .views import (
     MisContratosListView,
     ContratoViewSet,
     DashboardStatsView,
+    CheckoutInvitadoView,
 )
 
 app_name = 'api'
@@ -61,6 +62,7 @@ urlpatterns = [
     # 3. CHECKOUT ATÓMICO Y CONTRATOS DEL CLIENTE
     # --------------------------------------------------------------------------
     path('contratos/checkout/', CheckoutContratoView.as_view(), name='contratos_checkout'),
+    path('contratos/checkout-invitado/', CheckoutInvitadoView.as_view(), name='contratos_checkout_invitado'),
     path('mis-contratos/', MisContratosListView.as_view(), name='mis_contratos'),
     path('dashboard/stats/', DashboardStatsView.as_view(), name='dashboard_stats'),
 

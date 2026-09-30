@@ -383,7 +383,7 @@ function configurarEventosFiltros() {
     const fechaInicio = document.getElementById('fecha-inicio').value;
     const fechaFin = document.getElementById('fecha-fin').value;
 
-    const ok = await Cart.addItem(maquinariaSeleccionada.id, fechaInicio, fechaFin);
+    const ok = await Cart.addItem(maquinariaSeleccionada.id, fechaInicio, fechaFin, maquinariaSeleccionada);
     if (ok) {
       modalArriendoInstance.hide();
     }

@@ -220,3 +220,48 @@ class RentingMaquinariaTests(TestCase):
         self.assertIn('produccion_mensual', resp.data)
         self.assertIn('comparacion_mensual', resp.data)
         self.assertIn('comparacion_trimestral', resp.data)
+
+    def test_08_checkout_invitado_sin_registro(self):
+        """
+        Usuario invitado puede hacer checkout sin autenticarse (AllowAny).
+        Se solicita contacto (nombre, rut, email, telefono), descuenta stock y
+        genera ContratoArriendo con es_invitado=True y usuario=None.
+        """
+        # Cliente sin autenticar
+        self.client.logout()
+
+        hoy = date.today()
+        f_ini = hoy + timedelta(days=1)
+        f_fin = f_ini + timedelta(days=2)  # 2 días
+
+        payload = {
+            'nombre_cliente': 'Constructora Alfa Invitada',
+            'rut_cliente': '78.999.888-K',
+            'email_cliente': 'contacto@alfa.cl',
+            'telefono_cliente': '+56 9 8888 7777',
+            'items': [
+                {
+                    'maquinaria_id': self.maquinaria.id,
+                    'fecha_inicio': f_ini.isoformat(),
+                    'fecha_fin': f_fin.isoformat()
+                }
+            ]
+        }
+
+        resp = self.client.post('/api/contratos/checkout-invitado/', payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        contrato_data = resp.data['contrato']
+        self.assertTrue(contrato_data['es_invitado'])
+        self.assertEqual(contrato_data['nombre_cliente'], 'Constructora Alfa Invitada')
+
+        # Stock debe descontarse de 2 a 1
+        self.maquinaria.refresh_from_db()
+        self.assertEqual(self.maquinaria.unidades_disponibles, 1)
+
+        # Contrato en BD
+        contrato_id = contrato_data['id']
+        contrato = ContratoArriendo.objects.get(id=contrato_id)
+        self.assertIsNone(contrato.usuario)
+        self.assertTrue(contrato.es_invitado)
+        self.assertEqual(contrato.detalles.count(), 1)
+

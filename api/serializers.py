@@ -270,7 +270,8 @@ class DetalleContratoSerializer(serializers.ModelSerializer):
 
 class ContratoArriendoSerializer(serializers.ModelSerializer):
     """
-    Serializador completo de contratos de arriendo para clientes y ejecutivos.
+    Serializador completo de contratos de arriendo para clientes registrados,
+    invitados y ejecutivos.
     """
     detalles = DetalleContratoSerializer(many=True, read_only=True)
     usuario_info = serializers.SerializerMethodField()
@@ -278,18 +279,31 @@ class ContratoArriendoSerializer(serializers.ModelSerializer):
     class Meta:
         model = ContratoArriendo
         fields = [
-            'id', 'usuario', 'usuario_info', 'estado', 'monto_total',
-            'fecha_creacion', 'fecha_actualizacion', 'detalles'
+            'id', 'usuario', 'usuario_info', 'es_invitado', 'nombre_cliente',
+            'rut_cliente', 'email_cliente', 'telefono_cliente',
+            'estado', 'monto_total', 'fecha_creacion', 'fecha_actualizacion', 'detalles'
         ]
         read_only_fields = ['id', 'usuario', 'monto_total', 'fecha_creacion', 'fecha_actualizacion']
 
     def get_usuario_info(self, obj):
+        if obj.usuario:
+            return {
+                'id': obj.usuario.id,
+                'username': obj.usuario.username,
+                'razon_social': obj.usuario.razon_social or obj.usuario.get_full_name() or obj.usuario.username,
+                'rut_empresa': obj.usuario.rut_empresa or 'N/A',
+                'email': obj.usuario.email,
+                'telefono': obj.usuario.telefono or 'N/A',
+                'es_invitado': False,
+            }
         return {
-            'id': obj.usuario.id,
-            'username': obj.usuario.username,
-            'razon_social': obj.usuario.razon_social or obj.usuario.get_full_name() or obj.usuario.username,
-            'rut_empresa': obj.usuario.rut_empresa or 'N/A',
-            'email': obj.usuario.email,
+            'id': None,
+            'username': 'Invitado',
+            'razon_social': obj.nombre_cliente or 'Cliente Invitado',
+            'rut_empresa': obj.rut_cliente or 'N/A',
+            'email': obj.email_cliente or 'N/A',
+            'telefono': obj.telefono_cliente or 'N/A',
+            'es_invitado': True,
         }
 
 
@@ -302,3 +316,35 @@ class CambioEstadoContratoSerializer(serializers.Serializer):
         choices=ContratoArriendo.ESTADOS_CHOICES,
         required=True
     )
+
+
+# ==============================================================================
+# BLOQUE 7: SERIALIZADOR DE CHECKOUT PARA USUARIO INVITADO (SIN REGISTRO)
+# ==============================================================================
+class ItemInvitadoInputSerializer(serializers.Serializer):
+    """Ítem enviado desde el carro temporal del usuario invitado."""
+    maquinaria_id = serializers.IntegerField(required=True)
+    fecha_inicio = serializers.DateField(required=True)
+    fecha_fin = serializers.DateField(required=True)
+
+    def validate(self, attrs):
+        if attrs['fecha_fin'] < attrs['fecha_inicio']:
+            raise serializers.ValidationError("La fecha de término no puede ser anterior a la de inicio.")
+        return attrs
+
+
+class CheckoutInvitadoSerializer(serializers.Serializer):
+    """
+    Formulario de Checkout para Usuario Invitado:
+    Captura los datos de contacto y facturación sin exigir registro ni contraseña.
+    """
+    nombre_cliente = serializers.CharField(max_length=150, required=True)
+    rut_cliente = serializers.CharField(max_length=20, required=True)
+    email_cliente = serializers.EmailField(required=True)
+    telefono_cliente = serializers.CharField(max_length=30, required=True)
+    items = ItemInvitadoInputSerializer(many=True, required=True)
+
+    def validate_items(self, value):
+        if not value:
+            raise serializers.ValidationError("El carro temporal se encuentra vacío.")
+        return value

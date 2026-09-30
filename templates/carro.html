@@ -5,14 +5,14 @@
 
 {% block content %}
 <section class="container py-5">
-  <!-- Encabezado del Carro -->
+  <!-- Encabezado del Carro Dinámico (Persistente vs Temporal) -->
   <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <div>
-      <h2 class="fw-bold mb-1 text-dark">
-        <i class="fa-solid fa-cart-flatbed text-warning me-2"></i>Carro de Arriendo Persistente
+      <h2 class="fw-bold mb-1 text-dark" id="carro-titulo-principal">
+        <i class="fa-solid fa-cart-flatbed text-warning me-2"></i>Carro de Arriendo
       </h2>
-      <p class="text-muted mb-0 small">
-        Tus equipos y fechas seleccionadas se conservan automáticamente en la base de datos PostgreSQL.
+      <p class="text-muted mb-0 small" id="carro-subtitulo-info">
+        Tus equipos y fechas seleccionadas se conservan automáticamente.
       </p>
     </div>
     <div class="d-flex gap-2">
@@ -22,6 +22,21 @@
       <button id="btn-vaciar-carro" class="btn btn-outline-danger d-none">
         <i class="fa-solid fa-trash-can me-1"></i>Vaciar Carro
       </button>
+    </div>
+  </div>
+
+  <!-- Banner Informativo Contextual para Modo Invitado -->
+  <div id="banner-invitado" class="alert alert-info border-start border-info border-4 d-none mb-4 shadow-sm">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <div>
+        <i class="fa-solid fa-user-clock me-2 fs-5"></i>
+        <strong>Modo Invitado (Carro Temporal):</strong> Estás cotizando sin iniciar sesión. Tu carro se almacena de forma temporal en tu navegador y no requiere cuenta previa para completar el arriendo.
+      </div>
+      <div>
+        <a href="{% url 'login' %}" class="btn btn-sm btn-outline-primary">
+          <i class="fa-solid fa-arrow-right-to-bracket me-1"></i>Iniciar Sesión para Persistencia
+        </a>
+      </div>
     </div>
   </div>
 
@@ -43,7 +58,7 @@
             <!-- Loading Spinner -->
             <div class="text-center py-5 text-muted">
               <div class="spinner-border text-warning mb-2" role="status"></div>
-              <div>Cargando carro persistente...</div>
+              <div>Cargando equipos del carro...</div>
             </div>
           </div>
 
@@ -90,7 +105,7 @@
             <strong>Control de Stock Atómico:</strong> La flota no se descuenta al agregar al carro. Se reserva y descuenta únicamente al confirmar y pagar.
           </div>
 
-          <!-- Botón de Checkout -->
+          <!-- Botón de Checkout Dinámico -->
           <button id="btn-checkout" class="btn btn-industrial w-100 py-3 fw-bold fs-5 shadow-sm disabled">
             <i class="fa-solid fa-credit-card me-2"></i>Confirmar y Pagar (Checkout)
           </button>
@@ -99,43 +114,192 @@
     </div>
   </div>
 </section>
+
+<!-- ============================================================================== -->
+<!-- MODAL: CHECKOUT PARA USUARIO INVITADO (SIN REGISTRO PREVIO)                   -->
+<!-- ============================================================================== -->
+<div class="modal fade" id="modalCheckoutInvitado" tabindex="-1" aria-labelledby="modalCheckoutInvitadoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-dark text-white border-bottom border-warning border-3">
+        <h5 class="modal-title fw-bold" id="modalCheckoutInvitadoLabel">
+          <i class="fa-solid fa-id-card text-warning me-2"></i>Datos de Contacto para Arriendo
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+
+      <form id="form-checkout-invitado">
+        <div class="modal-body p-4">
+          <p class="text-muted small mb-3">
+            Para procesar tu contrato de arriendo sin necesidad de crear una cuenta ni contraseña, ingresa tus datos de contacto:
+          </p>
+
+          <div class="mb-3">
+            <label for="invitado-nombre" class="form-label fw-bold">Nombre Completo o Razón Social <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="invitado-nombre" name="nombre_cliente" required placeholder="Ej: Constructora San Juan Ltda. / Juan Pérez">
+          </div>
+
+          <div class="mb-3">
+            <label for="invitado-rut" class="form-label fw-bold">RUT Personal o Empresa <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="invitado-rut" name="rut_cliente" required placeholder="Ej: 76.123.456-7">
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label for="invitado-email" class="form-label fw-bold">Correo Electrónico <span class="text-danger">*</span></label>
+              <input type="email" class="form-control" id="invitado-email" name="email_cliente" required placeholder="correo@empresa.cl">
+            </div>
+            <div class="col-md-6">
+              <label for="invitado-telefono" class="form-label fw-bold">Teléfono de Contacto <span class="text-danger">*</span></label>
+              <input type="tel" class="form-control" id="invitado-telefono" name="telefono_cliente" required placeholder="+56 9 1234 5678">
+            </div>
+          </div>
+
+          <div class="bg-light p-3 rounded border">
+            <div class="d-flex justify-content-between small text-muted mb-1">
+              <span>Equipos a arrendar:</span>
+              <strong id="modal-invitado-cantidad" class="text-dark">0</strong>
+            </div>
+            <div class="d-flex justify-content-between fw-bold text-dark">
+              <span>Monto Total a Pagar:</span>
+              <span id="modal-invitado-total" class="text-warning fs-5">$0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" id="btn-submit-invitado" class="btn btn-industrial fw-bold px-4">
+            <i class="fa-solid fa-check-circle me-1"></i>Finalizar y Pagar Arriendo
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================================== -->
+<!-- MODAL: CONFIRMACIÓN EXITOSA DE ARRIENDO INVITADO                               -->
+<!-- ============================================================================== -->
+<div class="modal fade" id="modalExitoInvitado" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg text-center p-4">
+      <div class="text-success mb-3">
+        <i class="fa-solid fa-circle-check fa-4x"></i>
+      </div>
+      <h4 class="fw-bold text-dark mb-2">¡Arriendo Confirmado con Éxito!</h4>
+      <p class="text-muted small mb-3" id="modal-exito-detalle">
+        Tu contrato ha sido generado y el stock de los equipos ha sido reservado.
+      </p>
+      <div class="alert alert-light border py-2 mb-4">
+        <div class="text-muted small">Número de Contrato:</div>
+        <div class="fs-4 fw-bold text-dark" id="modal-exito-numero">#000</div>
+      </div>
+      <div class="d-flex gap-2 justify-content-center">
+        <a href="{% url 'catalogo' %}" class="btn btn-industrial px-4">
+          <i class="fa-solid fa-shapes me-1"></i>Volver al Catálogo
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 /**
- * LÓGICA ESPECÍFICA DEL CARRO PERSISTENTE Y CHECKOUT ATÓMICO
+ * ==============================================================================
+ * CONTROLADOR INTEGRAL DEL CARRO (DUAL: PERSISTENTE EN POSTGRESQL & TEMPORAL)
+ * ==============================================================================
+ * Permite a usuarios registrados operar con su Carro Persistente en BD y a
+ * usuarios invitados cotizar sin registrarse, solicitando sus datos en el Checkout.
  */
 let carroActual = null;
+let modalCheckoutInvitadoBs = null;
+let modalExitoInvitadoBs = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-  if (!Auth.isAuthenticated()) {
-    showToast("Por favor inicia sesión para consultar tu carro de arriendo.", "warning");
-    setTimeout(() => {
-      window.location.href = '/login/';
-    }, 1200);
-    return;
-  }
+  // Inicializar modales de Bootstrap
+  const modalEl = document.getElementById('modalCheckoutInvitado');
+  if (modalEl) modalCheckoutInvitadoBs = new bootstrap.Modal(modalEl);
+
+  const modalExitoEl = document.getElementById('modalExitoInvitado');
+  if (modalExitoEl) modalExitoInvitadoBs = new bootstrap.Modal(modalExitoEl);
+
+  // Configurar interfaz según si es usuario autenticado o invitado
+  actualizarEncabezadoModo();
+
+  // Cargar carro según el modo correspondiente
   await cargarCarro();
+
+  // Configurar manejadores de eventos
   configurarEventosCarro();
 });
 
-// Carga el carro persistente desde la base de datos
-async function cargarCarro() {
-  try {
-    const resp = await apiFetch('/carro-arriendo/');
-    if (resp.ok) {
-      carroActual = await resp.json();
-      renderizarCarro(carroActual);
-    } else {
-      showToast("Error al obtener la información del carro.", "danger");
-    }
-  } catch (e) {
-    console.error("Error al cargar carro:", e);
+// Actualiza encabezados y alertas contextuales
+function actualizarEncabezadoModo() {
+  const titulo = document.getElementById('carro-titulo-principal');
+  const subtitulo = document.getElementById('carro-subtitulo-info');
+  const bannerInvitado = document.getElementById('banner-invitado');
+
+  if (Auth.isAuthenticated()) {
+    titulo.innerHTML = `<i class="fa-solid fa-database text-warning me-2"></i>Carro de Arriendo Persistente`;
+    subtitulo.textContent = "Tus equipos y fechas seleccionadas se conservan automáticamente en la base de datos PostgreSQL.";
+    if (bannerInvitado) bannerInvitado.classList.add('d-none');
+  } else {
+    titulo.innerHTML = `<i class="fa-solid fa-cart-shopping text-warning me-2"></i>Carro de Arriendo Temporal (Invitado)`;
+    subtitulo.textContent = "Estás cotizando como usuario invitado. Al presionar Confirmar y Pagar, sólo ingresa tus datos de contacto.";
+    if (bannerInvitado) bannerInvitado.classList.remove('d-none');
   }
 }
 
-// Renderiza los ítems y los montos totales del carro
+// Carga el carro (Persistente desde API o Temporal desde localStorage)
+async function cargarCarro() {
+  if (Auth.isAuthenticated()) {
+    // MODO AUTENTICADO: Consultar PostgreSQL vía API
+    try {
+      const resp = await apiFetch('/carro-arriendo/');
+      if (resp.ok) {
+        carroActual = await resp.json();
+        renderizarCarro(carroActual);
+      } else {
+        showToast("Error al obtener la información del carro persistente.", "danger");
+      }
+    } catch (e) {
+      console.error("Error al cargar carro persistente:", e);
+    }
+  } else {
+    // MODO INVITADO: Leer carro temporal de localStorage
+    const itemsInvitado = Cart.getGuestCart();
+    
+    // Calcular subtotales locales
+    let subtotalTarifas = 0;
+    let totalGarantias = 0;
+    let montoTotal = 0;
+
+    itemsInvitado.forEach(it => {
+      const maq = it.maquinaria || {};
+      const tarifa = Number(maq.tarifa_diaria || 0);
+      const garantia = Number(maq.garantia_fija || 0);
+      const sub = tarifa * (it.dias_uso || 1);
+      subtotalTarifas += sub;
+      totalGarantias += garantia;
+      montoTotal += (it.costo_calculado || (sub + garantia));
+    });
+
+    carroActual = {
+      es_invitado: true,
+      items: itemsInvitado,
+      subtotal_tarifas: subtotalTarifas,
+      total_garantias: totalGarantias,
+      monto_total: montoTotal
+    };
+
+    renderizarCarro(carroActual);
+  }
+}
+
+// Renderiza la lista de ítems y las cifras del resumen
 function renderizarCarro(carro) {
   const container = document.getElementById('carro-items-list');
   const emptyMsg = document.getElementById('carro-vacio-msg');
@@ -171,24 +335,25 @@ function renderizarCarro(carro) {
   resumenTotal.textContent = formatCLP(carro.monto_total);
 
   items.forEach(item => {
-    const maq = item.maquinaria;
-    const subtotalTarifas = Number(maq.tarifa_diaria) * item.dias_uso;
+    const maq = item.maquinaria || {};
+    const tarifaDiaria = Number(maq.tarifa_diaria || 0);
+    const subtotalTarifas = tarifaDiaria * item.dias_uso;
 
     const itemHtml = `
       <div class="p-3 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-3">
         <div class="d-flex align-items-center gap-3">
           <img src="${maq.imagen_url || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80'}" 
-               alt="${maq.nombre}" class="rounded object-fit-cover" style="width: 70px; height: 70px;">
+               alt="${maq.nombre || 'Maquinaria'}" class="rounded object-fit-cover" style="width: 70px; height: 70px;">
           <div>
-            <h6 class="fw-bold mb-1 text-dark">${maq.nombre}</h6>
+            <h6 class="fw-bold mb-1 text-dark">${maq.nombre || 'Equipo Industrial'}</h6>
             <div class="small text-muted mb-1">
               <i class="fa-solid fa-calendar-days text-warning me-1"></i>
               ${formatDate(item.fecha_inicio)} al ${formatDate(item.fecha_fin)} 
               <span class="badge bg-light text-dark border ms-1">${item.dias_uso} ${item.dias_uso === 1 ? 'día' : 'días'}</span>
             </div>
             <div class="small text-muted">
-              Tarifa: <strong>${formatCLP(maq.tarifa_diaria)}/día</strong> | 
-              Garantía: <strong>${formatCLP(maq.garantia_fija)}</strong>
+              Tarifa: <strong>${formatCLP(maq.tarifa_diaria || 0)}/día</strong> | 
+              Garantía: <strong>${formatCLP(maq.garantia_fija || 0)}</strong>
             </div>
           </div>
         </div>
@@ -208,54 +373,149 @@ function renderizarCarro(carro) {
   });
 }
 
-// Configura los botones de acción del carro
+// Configura eventos de botones y modales
 function configurarEventosCarro() {
   // Botón Vaciar Carro
   document.getElementById('btn-vaciar-carro').addEventListener('click', async () => {
     if (!confirm("¿Estás seguro de que deseas vaciar todos los equipos de tu carro?")) return;
-    try {
-      const resp = await apiFetch('/carro-arriendo/vaciar/', { method: 'POST' });
-      if (resp.ok) {
-        showToast("Carro vaciado exitosamente.", "info");
-        Cart.syncCounter();
-        await cargarCarro();
+
+    if (Auth.isAuthenticated()) {
+      try {
+        const resp = await apiFetch('/carro-arriendo/vaciar/', { method: 'POST' });
+        if (resp.ok) {
+          showToast("Carro persistente vaciado exitosamente.", "info");
+          Cart.syncCounter();
+          await cargarCarro();
+        }
+      } catch (e) {
+        showToast("Error al vaciar el carro persistente.", "danger");
       }
-    } catch (e) {
-      showToast("Error al vaciar el carro.", "danger");
+    } else {
+      Cart.clearGuestCart();
+      showToast("Carro temporal vaciado exitosamente.", "info");
+      await cargarCarro();
     }
   });
 
-  // Botón Checkout Atómico
+  // Botón Principal de Checkout
   document.getElementById('btn-checkout').addEventListener('click', async () => {
-    const btn = document.getElementById('btn-checkout');
-    btn.disabled = true;
-    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Procesando arriendo y stock...`;
+    if (Auth.isAuthenticated()) {
+      // CHECKOUT DE USUARIO REGISTRADO
+      const btn = document.getElementById('btn-checkout');
+      btn.disabled = true;
+      btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Procesando arriendo y stock...`;
 
-    try {
-      const resp = await apiFetch('/contratos/checkout/', { method: 'POST' });
-      const data = await resp.json();
+      try {
+        const resp = await apiFetch('/contratos/checkout/', { method: 'POST' });
+        const data = await resp.json();
 
-      if (resp.ok) {
-        showToast("¡Arriendo confirmado y pagado con éxito!", "success");
-        Cart.syncCounter();
-        setTimeout(() => {
-          window.location.href = '/mis-contratos/';
-        }, 1500);
-      } else {
-        const errorMsg = data.error || data.detail || "No fue posible procesar el arriendo.";
-        showToast(errorMsg, "danger");
+        if (resp.ok) {
+          showToast("¡Arriendo confirmado y pagado con éxito!", "success");
+          Cart.syncCounter();
+          setTimeout(() => {
+            window.location.href = '/mis-contratos/';
+          }, 1500);
+        } else {
+          const errorMsg = data.error || data.detail || "No fue posible procesar el arriendo.";
+          showToast(errorMsg, "danger");
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fa-solid fa-credit-card me-2"></i>Confirmar y Pagar (Checkout)`;
+        }
+      } catch (e) {
+        showToast("Error de conexión al procesar el checkout.", "danger");
         btn.disabled = false;
         btn.innerHTML = `<i class="fa-solid fa-credit-card me-2"></i>Confirmar y Pagar (Checkout)`;
       }
-    } catch (e) {
-      showToast("Error de conexión al procesar el checkout.", "danger");
-      btn.disabled = false;
-      btn.innerHTML = `<i class="fa-solid fa-credit-card me-2"></i>Confirmar y Pagar (Checkout)`;
+    } else {
+      // CHECKOUT DE USUARIO INVITADO (Abre Modal de Datos sin registro)
+      if (!carroActual || !carroActual.items || carroActual.items.length === 0) {
+        showToast("El carro se encuentra vacío.", "warning");
+        return;
+      }
+
+      document.getElementById('modal-invitado-cantidad').textContent = 
+        `${carroActual.items.length} ${carroActual.items.length === 1 ? 'equipo' : 'equipos'}`;
+      document.getElementById('modal-invitado-total').textContent = formatCLP(carroActual.monto_total);
+
+      if (modalCheckoutInvitadoBs) {
+        modalCheckoutInvitadoBs.show();
+      }
     }
   });
+
+  // Envío del Formulario de Checkout para Invitados
+  const formInvitado = document.getElementById('form-checkout-invitado');
+  if (formInvitado) {
+    formInvitado.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const btnSubmit = document.getElementById('btn-submit-invitado');
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Procesando arriendo...`;
+
+      const nombre = document.getElementById('invitado-nombre').value.trim();
+      const rut = document.getElementById('invitado-rut').value.trim();
+      const email = document.getElementById('invitado-email').value.trim();
+      const telefono = document.getElementById('invitado-telefono').value.trim();
+
+      const itemsPayload = (carroActual.items || []).map(it => ({
+        maquinaria_id: it.maquinaria_id,
+        fecha_inicio: it.fecha_inicio,
+        fecha_fin: it.fecha_fin
+      }));
+
+      const payload = {
+        nombre_cliente: nombre,
+        rut_cliente: rut,
+        email_cliente: email,
+        telefono_cliente: telefono,
+        items: itemsPayload
+      };
+
+      try {
+        const resp = await apiFetch('/contratos/checkout-invitado/', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+
+        const data = await resp.json();
+
+        if (resp.ok) {
+          // Ocultar modal de formulario
+          if (modalCheckoutInvitadoBs) modalCheckoutInvitadoBs.hide();
+
+          // Limpiar el carro temporal de localStorage
+          Cart.clearGuestCart();
+
+          // Mostrar modal de éxito
+          const contratoCreado = data.contrato || data;
+          document.getElementById('modal-exito-numero').textContent = `#${contratoCreado.id || '001'}`;
+          document.getElementById('modal-exito-detalle').textContent = 
+            `Arriendo a nombre de ${nombre} por un monto de ${formatCLP(contratoCreado.monto_total || carroActual.monto_total)}. El stock en flota ha sido descontado atómicamente.`;
+
+          if (modalExitoInvitadoBs) {
+            modalExitoInvitadoBs.show();
+          }
+
+          // Re-renderizar carro vacío
+          await cargarCarro();
+        } else {
+          const errorMsg = data.error || data.detail || (data.items ? JSON.stringify(data.items) : "No fue posible procesar el arriendo.");
+          showToast(errorMsg, "danger");
+          btnSubmit.disabled = false;
+          btnSubmit.innerHTML = `<i class="fa-solid fa-check-circle me-1"></i>Finalizar y Pagar Arriendo`;
+        }
+      } catch (err) {
+        console.error("Error en checkout invitado:", err);
+        showToast("Error de conexión al procesar el arriendo.", "danger");
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = `<i class="fa-solid fa-check-circle me-1"></i>Finalizar y Pagar Arriendo`;
+      }
+    });
+  }
 }
 
-// Eliminar ítem individual
+// Elimina un ítem individual tanto en modo persistente como en temporal
 async function eliminarItemCarro(itemId) {
   const ok = await Cart.removeItem(itemId);
   if (ok) {
@@ -264,3 +524,4 @@ async function eliminarItemCarro(itemId) {
 }
 </script>
 {% endblock %}
+

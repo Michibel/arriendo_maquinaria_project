@@ -52,6 +52,12 @@ Plataforma web integral para la gestión y arriendo de maquinarias pesadas y equ
    - **Comparaciones trimestrales:** Análisis comparativo de ingresos y arriendos por trimestres (Q1, Q2, Q3, Q4).
    - **Redirección automática:** Al iniciar sesión como Ejecutivo/Administrador, el sistema redirige automáticamente a `/panel/`.
 
+7. **Soporte de Carro Temporal y Checkout para Usuario Invitado (Sin Registro):**
+   - Los usuarios no registrados pueden explorar el catálogo y agregar maquinarias al carro de arriendo temporal sin necesidad de iniciar sesión previa.
+   - El carro de invitado se mantiene de forma temporal en el navegador (`localStorage`), sin generar registros huérfanos en la base de datos PostgreSQL.
+   - Al finalizar la compra (`POST /api/contratos/checkout-invitado/`), un modal interactivo captura los datos de contacto y facturación: Nombre completo, RUT, Email y Teléfono.
+   - La operación se ejecuta bajo `@transaction.atomic` garantizando el descuento atómico de stock en flota, la creación del `ContratoArriendo` (con `es_invitado=True`) y el snapshot inmutable en `DetalleContrato`.
+
 ---
 
 ## 🚀 Guía de Instalación y Ejecución Local

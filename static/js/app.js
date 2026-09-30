@@ -18,6 +18,7 @@
 const STORAGE_ACCESS_TOKEN = 'rentamaq_access_token';
 const STORAGE_REFRESH_TOKEN = 'rentamaq_refresh_token';
 const STORAGE_USER_DATA = 'rentamaq_user_data';
+const STORAGE_GUEST_CART = 'rentamaq_guest_cart';
 
 // ============================================================================
 // BLOQUE 1: UTILIDADES DE AUTENTICACIÓN Y ALMACENAMIENTO (JWT & RBAC)
@@ -81,6 +82,10 @@ const Auth = {
     const misContratosLink = document.getElementById('nav-link-contratos');
     const cartNav = document.getElementById('nav-link-carro');
 
+    if (cartNav) {
+      cartNav.style.display = 'block';
+    }
+
     if (user && this.isAuthenticated()) {
       if (guestNav) guestNav.classList.add('d-none');
       if (userNav) userNav.classList.remove('d-none');
@@ -99,18 +104,14 @@ const Auth = {
       if (misContratosLink) {
         misContratosLink.style.display = 'block';
       }
-      if (cartNav) {
-        cartNav.style.display = 'block';
-        Cart.syncCounter();
-      }
     } else {
       if (guestNav) guestNav.classList.remove('d-none');
       if (userNav) userNav.classList.add('d-none');
       if (panelEjecutivoLink) panelEjecutivoLink.style.display = 'none';
       if (misContratosLink) misContratosLink.style.display = 'none';
-      const badge = document.getElementById('cart-counter-badge');
-      if (badge) badge.textContent = '0';
     }
+
+    Cart.syncCounter();
   }
 };
 
@@ -197,74 +198,132 @@ function formatDate(fechaStr) {
 // BLOQUE 5: GESTOR DEL CARRO DE ARRIENDO (Cart Manager)
 // ============================================================================
 const Cart = {
-  async syncCounter() {
-    if (!Auth.isAuthenticated()) return;
+  getGuestCart() {
     try {
-      const resp = await apiFetch('/carro-arriendo/');
-      if (resp.ok) {
-        const data = await resp.json();
-        const badge = document.getElementById('cart-counter-badge');
-        if (badge) {
-          badge.textContent = data.total_items || 0;
-        }
-      }
+      const data = localStorage.getItem(STORAGE_GUEST_CART);
+      return data ? JSON.parse(data) : [];
     } catch (e) {
-      console.error("Error sincronizando contador del carro:", e);
+      return [];
     }
   },
 
-  async addItem(maquinariaId, fechaInicio, fechaFin) {
-    if (!Auth.isAuthenticated()) {
-      showToast("Debes iniciar sesión para arrendar maquinarias.", "warning");
-      setTimeout(() => {
-        window.location.href = '/login/';
-      }, 1500);
-      return false;
+  setGuestCart(items) {
+    localStorage.setItem(STORAGE_GUEST_CART, JSON.stringify(items));
+    this.syncCounter();
+  },
+
+  clearGuestCart() {
+    localStorage.removeItem(STORAGE_GUEST_CART);
+    this.syncCounter();
+  },
+
+  async syncCounter() {
+    const badge = document.getElementById('cart-counter-badge');
+    if (!badge) return;
+
+    if (Auth.isAuthenticated()) {
+      try {
+        const resp = await apiFetch('/carro-arriendo/');
+        if (resp.ok) {
+          const data = await resp.json();
+          badge.textContent = data.total_items || 0;
+        }
+      } catch (e) {
+        console.error("Error sincronizando contador del carro:", e);
+      }
+    } else {
+      const items = this.getGuestCart();
+      badge.textContent = items.length;
     }
+  },
 
-    try {
-      const resp = await apiFetch('/carro-arriendo/', {
-        method: 'POST',
-        body: JSON.stringify({
-          maquinaria_id: maquinariaId,
-          fecha_inicio: fechaInicio,
-          fecha_fin: fechaFin
-        })
-      });
+  async addItem(maquinariaId, fechaInicio, fechaFin, maquinariaObj = null) {
+    if (Auth.isAuthenticated()) {
+      try {
+        const resp = await apiFetch('/carro-arriendo/', {
+          method: 'POST',
+          body: JSON.stringify({
+            maquinaria_id: maquinariaId,
+            fecha_inicio: fechaInicio,
+            fecha_fin: fechaFin
+          })
+        });
 
-      const data = await resp.json();
+        const data = await resp.json();
 
-      if (resp.ok) {
-        showToast(data.mensaje || "Equipo agregado al carro.", "success");
-        this.syncCounter();
-        return true;
-      } else {
-        const errorMsg = data.error || data.detail || (data.maquinaria_id ? data.maquinaria_id[0] : null) || "No se pudo agregar al carro.";
-        showToast(errorMsg, "danger");
+        if (resp.ok) {
+          showToast(data.mensaje || "Equipo agregado al carro persistente.", "success");
+          this.syncCounter();
+          return true;
+        } else {
+          const errorMsg = data.error || data.detail || (data.maquinaria_id ? data.maquinaria_id[0] : null) || "No se pudo agregar al carro.";
+          showToast(errorMsg, "danger");
+          return false;
+        }
+      } catch (e) {
+        showToast("Error de conexión al agregar al carro.", "danger");
         return false;
       }
-    } catch (e) {
-      showToast("Error de conexión al agregar al carro.", "danger");
-      return false;
+    } else {
+      // MODO INVITADO: Carro TEMPORAL no persistente
+      let items = this.getGuestCart();
+      const fIni = new Date(fechaInicio);
+      const fFin = new Date(fechaFin);
+      const dias = Math.max(1, Math.ceil((fFin - fIni) / (1000 * 60 * 60 * 24)));
+      const tarifa = Number(maquinariaObj ? maquinariaObj.tarifa_diaria : 0);
+      const garantia = Number(maquinariaObj ? maquinariaObj.garantia_fija : 0);
+      const subtotalTarifas = tarifa * dias;
+      const costoCalculado = subtotalTarifas + garantia;
+
+      const idxExistente = items.findIndex(it => it.maquinaria_id === maquinariaId);
+      if (idxExistente >= 0) {
+        items[idxExistente].fecha_inicio = fechaInicio;
+        items[idxExistente].fecha_fin = fechaFin;
+        items[idxExistente].dias_uso = dias;
+        items[idxExistente].costo_calculado = costoCalculado;
+        showToast(`Arriendo de '${maquinariaObj ? maquinariaObj.nombre : 'Equipo'}' actualizado en tu carro temporal.`, "info");
+      } else {
+        items.push({
+          id: Date.now(), // ID temporal local
+          maquinaria_id: maquinariaId,
+          maquinaria: maquinariaObj || { id: maquinariaId, nombre: 'Maquinaria', tarifa_diaria: tarifa, garantia_fija: garantia },
+          fecha_inicio: fechaInicio,
+          fecha_fin: fechaFin,
+          dias_uso: dias,
+          costo_calculado: costoCalculado
+        });
+        showToast(`'${maquinariaObj ? maquinariaObj.nombre : 'Equipo'}' agregado a tu carro temporal de invitado.`, "success");
+      }
+
+      this.setGuestCart(items);
+      return true;
     }
   },
 
   async removeItem(itemId) {
-    try {
-      const resp = await apiFetch(`/carro-arriendo/${itemId}/`, {
-        method: 'DELETE'
-      });
-      if (resp.ok) {
-        showToast("Equipo eliminado del carro.", "info");
-        this.syncCounter();
-        return true;
-      } else {
-        showToast("No se pudo eliminar el ítem.", "danger");
+    if (Auth.isAuthenticated()) {
+      try {
+        const resp = await apiFetch(`/carro-arriendo/${itemId}/`, {
+          method: 'DELETE'
+        });
+        if (resp.ok) {
+          showToast("Equipo eliminado del carro.", "info");
+          this.syncCounter();
+          return true;
+        } else {
+          showToast("No se pudo eliminar el ítem.", "danger");
+          return false;
+        }
+      } catch (e) {
+        showToast("Error de conexión al eliminar del carro.", "danger");
         return false;
       }
-    } catch (e) {
-      showToast("Error de conexión al eliminar del carro.", "danger");
-      return false;
+    } else {
+      let items = this.getGuestCart();
+      items = items.filter(it => it.id !== itemId);
+      this.setGuestCart(items);
+      showToast("Equipo eliminado del carro temporal.", "info");
+      return true;
     }
   }
 };
