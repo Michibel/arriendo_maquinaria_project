@@ -1,0 +1,498 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Panel Ejecutivo de Arriendos | RentaMaq Industrial{% endblock %}
+
+{% block content %}
+<section class="container-fluid px-lg-5 py-4">
+  <!-- Encabezado de la Consola Ejecutiva -->
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <span class="badge bg-warning text-dark fw-bold mb-1">MÓDULO DE ADMINISTRACIÓN (RBAC)</span>
+      <h2 class="fw-bold mb-0 text-dark">
+        <i class="fa-solid fa-gauge-high text-warning me-2"></i>Panel del Ejecutivo de Arriendos
+      </h2>
+      <p class="text-muted small mb-0">
+        Supervisión de contratos, control transaccional de stock de flota y mantenimiento del catálogo.
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-industrial fw-bold" data-bs-toggle="modal" data-bs-target="#modalNuevaMaquinaria">
+        <i class="fa-solid fa-plus-circle me-1"></i>Nueva Maquinaria
+      </button>
+      <button class="btn btn-outline-dark" onclick="cargarTodoElPanel()">
+        <i class="fa-solid fa-rotate me-1"></i>Actualizar
+      </button>
+    </div>
+  </div>
+
+  <!-- Tarjetas KPI Industriales -->
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-warning border-4">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small fw-bold">TOTAL CONTRATOS</div>
+            <div id="kpi-total-contratos" class="fs-3 fw-bold text-dark">0</div>
+          </div>
+          <div class="bg-light p-3 rounded-circle text-warning">
+            <i class="fa-solid fa-file-contract fa-xl"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-success border-4">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small fw-bold">ARRIENDOS ACTIVOS</div>
+            <div id="kpi-arriendos-activos" class="fs-3 fw-bold text-success">0</div>
+          </div>
+          <div class="bg-light p-3 rounded-circle text-success">
+            <i class="fa-solid fa-truck-moving fa-xl"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-info border-4">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small fw-bold">UNIDADES EN FLOTA</div>
+            <div id="kpi-unidades-flota" class="fs-3 fw-bold text-info">0</div>
+          </div>
+          <div class="bg-light p-3 rounded-circle text-info">
+            <i class="fa-solid fa-boxes-stacked fa-xl"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-primary border-4">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small fw-bold">RECAUDACIÓN TOTAL</div>
+            <div id="kpi-recaudacion" class="fs-3 fw-bold text-primary">$0</div>
+          </div>
+          <div class="bg-light p-3 rounded-circle text-primary">
+            <i class="fa-solid fa-hand-holding-dollar fa-xl"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pestañas de Navegación del Panel -->
+  <ul class="nav nav-tabs mb-4 border-bottom border-warning border-2" id="panelTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active fw-bold text-dark" id="tab-contratos-btn" data-bs-toggle="tab" data-bs-target="#tab-contratos" type="button" role="tab">
+        <i class="fa-solid fa-list-check me-2 text-warning"></i>Gestión de Contratos y Reposición de Flota
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link fw-bold text-dark" id="tab-flota-btn" data-bs-toggle="tab" data-bs-target="#tab-flota" type="button" role="tab">
+        <i class="fa-solid fa-warehouse me-2 text-warning"></i>Inventario y Catálogo de Maquinarias
+      </button>
+    </li>
+  </ul>
+
+  <div class="tab-content" id="panelTabsContent">
+    <!-- PESTAÑA 1: GESTIÓN DE CONTRATOS Y TRANSICIÓN DE ESTADOS -->
+    <div class="tab-pane fade show active" id="tab-contratos" role="tabpanel">
+      <div class="card shadow-sm border-0 rounded-3">
+        <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+          <span class="fw-bold">
+            <i class="fa-solid fa-file-invoice text-warning me-2"></i>Contratos de Arriendo Registrados
+          </span>
+          <span class="small text-white-50">Transiciones automáticas de stock en PostgreSQL</span>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light small text-uppercase">
+                <tr>
+                  <th>N° Contrato</th>
+                  <th>Empresa Constructora</th>
+                  <th>Fecha Emisión</th>
+                  <th>Equipos Incluidos</th>
+                  <th>Monto Total</th>
+                  <th>Estado Actual</th>
+                  <th class="text-center">Cambiar Estado (Transaccional)</th>
+                </tr>
+              </thead>
+              <tbody id="tabla-contratos-body">
+                <tr>
+                  <td colspan="7" class="text-center py-4 text-muted">Cargando contratos...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PESTAÑA 2: CATÁLOGO Y EDICIÓN DE MAQUINARIAS -->
+    <div class="tab-pane fade" id="tab-flota" role="tabpanel">
+      <div class="card shadow-sm border-0 rounded-3">
+        <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+          <span class="fw-bold">
+            <i class="fa-solid fa-truck-pickup text-warning me-2"></i>Inventario de Flota
+          </span>
+          <button class="btn btn-sm btn-industrial" data-bs-toggle="modal" data-bs-target="#modalNuevaMaquinaria">
+            <i class="fa-solid fa-plus me-1"></i>Agregar Maquinaria
+          </button>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light small text-uppercase">
+                <tr>
+                  <th>Equipo</th>
+                  <th>Categoría</th>
+                  <th>Tarifa Diaria</th>
+                  <th>Garantía Fija</th>
+                  <th>Stock en Flota</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tabla-maquinarias-body">
+                <tr>
+                  <td colspan="6" class="text-center py-4 text-muted">Cargando flota...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================================
+     MODAL CREAR / REGISTRAR NUEVA MAQUINARIA
+     ======================================================================== -->
+<div class="modal fade" id="modalNuevaMaquinaria" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-dark text-white border-bottom border-warning border-3">
+        <h5 class="modal-title fw-bold">
+          <i class="fa-solid fa-plus-circle text-warning me-2"></i>Registrar Maquinaria en Flota
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="form-nueva-maquinaria">
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-bold small">Nombre de la Maquinaria</label>
+            <input type="text" id="nueva-maq-nombre" class="form-control" required placeholder="Ej: Excavadora CAT 330">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold small">Categoría</label>
+            <select id="nueva-maq-cat" class="form-select" required>
+              <!-- Dinámico -->
+            </select>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label fw-bold small">Tarifa Diaria (CLP)</label>
+              <input type="number" id="nueva-maq-tarifa" class="form-control" required min="1000" placeholder="120000">
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-bold small">Garantía Fija (CLP)</label>
+              <input type="number" id="nueva-maq-garantia" class="form-control" required min="0" placeholder="400000">
+            </div>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label fw-bold small">Unidades Disponibles (Stock)</label>
+              <input type="number" id="nueva-maq-stock" class="form-control" required min="1" value="3">
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-bold small">URL de Imagen</label>
+              <input type="url" id="nueva-maq-img" class="form-control" placeholder="https://...">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold small">Descripción y Especificaciones</label>
+            <textarea id="nueva-maq-desc" class="form-control" rows="3" required placeholder="Capacidad, peso operativo, motor..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-industrial fw-bold">
+            <i class="fa-solid fa-save me-1"></i>Guardar en Flota
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/**
+ * LÓGICA DEL PANEL EJECUTIVO (ADMINISTRACIÓN Y TRANSACCIONES)
+ */
+let listaContratos = [];
+let listaMaquinarias = [];
+let categoriasDisponibles = [];
+let modalNuevaMaqInstance = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!Auth.isAuthenticated() || !Auth.isEjecutivo()) {
+    showToast("Acceso exclusivo para el Ejecutivo de Arriendos.", "danger");
+    setTimeout(() => {
+      window.location.href = '/login/';
+    }, 1200);
+    return;
+  }
+
+  modalNuevaMaqInstance = new bootstrap.Modal(document.getElementById('modalNuevaMaquinaria'));
+  await cargarTodoElPanel();
+  configurarFormNuevaMaquinaria();
+});
+
+async function cargarTodoElPanel() {
+  await Promise.all([
+    cargarCategoriasSelect(),
+    cargarContratosEjecutivo(),
+    cargarMaquinariasInventario()
+  ]);
+  actualizarKPIs();
+}
+
+async function cargarCategoriasSelect() {
+  try {
+    const resp = await apiFetch('/categorias/');
+    if (resp.ok) {
+      categoriasDisponibles = await resp.json();
+      const select = document.getElementById('nueva-maq-cat');
+      select.innerHTML = '<option value="">Seleccione una categoría</option>';
+      categoriasDisponibles.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.nombre;
+        select.appendChild(opt);
+      });
+    }
+  } catch (e) {
+    console.error("Error cargando categorías:", e);
+  }
+}
+
+async function cargarContratosEjecutivo() {
+  const tbody = document.getElementById('tabla-contratos-body');
+  try {
+    const resp = await apiFetch('/contratos/');
+    if (resp.ok) {
+      listaContratos = await resp.json();
+      tbody.innerHTML = '';
+
+      if (listaContratos.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">No existen contratos registrados aún.</td></tr>`;
+        return;
+      }
+
+      listaContratos.forEach(con => {
+        const empresa = con.usuario_info ? con.usuario_info.razon_social : 'Cliente';
+        const rut = con.usuario_info ? con.usuario_info.rut_empresa : 'N/A';
+        const fecha = new Date(con.fecha_creacion).toLocaleDateString('es-CL');
+        const badgeClass = `badge-estado-${con.estado}`;
+
+        const equiposNombres = (con.detalles || []).map(d => d.nombre_maquinaria).join(', ') || 'Sin detalles';
+
+        const row = `
+          <tr>
+            <td class="fw-bold text-warning">#${con.id}</td>
+            <td>
+              <div class="fw-bold text-dark">${empresa}</div>
+              <small class="text-muted">RUT: ${rut}</small>
+            </td>
+            <td class="small text-muted">${fecha}</td>
+            <td class="small text-dark text-truncate" style="max-width: 250px;" title="${equiposNombres}">
+              ${equiposNombres}
+            </td>
+            <td class="fw-bold text-dark">${formatCLP(con.monto_total)}</td>
+            <td>
+              <span class="badge ${badgeClass} px-2 py-1">${con.estado}</span>
+            </td>
+            <td class="text-center">
+              <select class="form-select form-select-sm d-inline-block w-auto" onchange="cambiarEstadoContrato(${con.id}, this.value)">
+                <option value="PENDIENTE" ${con.estado === 'PENDIENTE' ? 'selected' : ''}>PENDIENTE</option>
+                <option value="PAGADO" ${con.estado === 'PAGADO' ? 'selected' : ''}>PAGADO</option>
+                <option value="ENTREGADO" ${con.estado === 'ENTREGADO' ? 'selected' : ''}>ENTREGADO</option>
+                <option value="COMPLETADO" ${con.estado === 'COMPLETADO' ? 'selected' : ''}>COMPLETADO (Devuelto)</option>
+                <option value="CANCELADO" ${con.estado === 'CANCELADO' ? 'selected' : ''}>CANCELADO</option>
+              </select>
+            </td>
+          </tr>
+        `;
+        tbody.insertAdjacentHTML('beforeend', row);
+      });
+    }
+  } catch (e) {
+    console.error("Error cargando contratos:", e);
+  }
+}
+
+async function cargarMaquinariasInventario() {
+  const tbody = document.getElementById('tabla-maquinarias-body');
+  try {
+    const resp = await apiFetch('/maquinarias/');
+    if (resp.ok) {
+      listaMaquinarias = await resp.json();
+      tbody.innerHTML = '';
+
+      listaMaquinarias.forEach(m => {
+        const row = `
+          <tr>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <img src="${m.imagen_url || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80'}" 
+                     class="rounded object-fit-cover" style="width: 45px; height: 45px;">
+                <div class="fw-bold text-dark">${m.nombre}</div>
+              </div>
+            </td>
+            <td class="small text-muted">${m.categoria_nombre || 'N/A'}</td>
+            <td class="fw-bold text-dark">${formatCLP(m.tarifa_diaria)} / día</td>
+            <td class="small text-muted">${formatCLP(m.garantia_fija)}</td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge ${m.unidades_disponibles > 0 ? 'bg-success' : 'bg-danger'} px-2 py-1">
+                  ${m.unidades_disponibles} un.
+                </span>
+                <button class="btn btn-outline-secondary btn-sm py-0 px-2" onclick="ajustarStock(${m.id}, 1)" title="Sumar 1 unidad">+</button>
+                <button class="btn btn-outline-secondary btn-sm py-0 px-2" onclick="ajustarStock(${m.id}, -1)" title="Restar 1 unidad" ${m.unidades_disponibles <= 0 ? 'disabled' : ''}>-</button>
+              </div>
+            </td>
+            <td>
+              <button class="btn btn-sm btn-outline-danger" onclick="eliminarMaquinaria(${m.id})" title="Eliminar maquinaria">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+        tbody.insertAdjacentHTML('beforeend', row);
+      });
+    }
+  } catch (e) {
+    console.error("Error cargando flota:", e);
+  }
+}
+
+function actualizarKPIs() {
+  document.getElementById('kpi-total-contratos').textContent = listaContratos.length;
+  
+  const activos = listaContratos.filter(c => ['PAGADO', 'ENTREGADO'].includes(c.estado)).length;
+  document.getElementById('kpi-arriendos-activos').textContent = activos;
+
+  const totalStock = listaMaquinarias.reduce((acc, m) => acc + (m.unidades_disponibles || 0), 0);
+  document.getElementById('kpi-unidades-flota').textContent = totalStock;
+
+  const recaudacion = listaContratos
+    .filter(c => c.estado !== 'CANCELADO')
+    .reduce((acc, c) => acc + Number(c.monto_total || 0), 0);
+  document.getElementById('kpi-recaudacion').textContent = formatCLP(recaudacion);
+}
+
+// Acción PATCH para cambio de estado con reposición/descuento transaccional
+async function cambiarEstadoContrato(contratoId, nuevoEstado) {
+  try {
+    const resp = await apiFetch(`/contratos/${contratoId}/estado/`, {
+      method: 'PATCH',
+      body: JSON.stringify({ nuevo_estado: nuevoEstado })
+    });
+
+    const data = await resp.json();
+    if (resp.ok) {
+      showToast(data.mensaje || "Estado actualizado con éxito.", "success");
+      await cargarTodoElPanel();
+    } else {
+      const err = data.error || data.detail || "No fue posible actualizar el estado.";
+      showToast(err, "danger");
+      await cargarContratosEjecutivo();
+    }
+  } catch (e) {
+    showToast("Error de conexión al actualizar estado.", "danger");
+    await cargarContratosEjecutivo();
+  }
+}
+
+// Ajuste rápido de stock de maquinaria
+async function ajustarStock(maquinariaId, delta) {
+  const maq = listaMaquinarias.find(m => m.id === maquinariaId);
+  if (!maq) return;
+
+  const nuevoStock = Math.max(0, maq.unidades_disponibles + delta);
+  try {
+    const resp = await apiFetch(`/maquinarias/${maquinariaId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify({ unidades_disponibles: nuevoStock })
+    });
+    if (resp.ok) {
+      showToast(`Stock de '${maq.nombre}' actualizado a ${nuevoStock}.`, "info");
+      await cargarMaquinariasInventario();
+      actualizarKPIs();
+    }
+  } catch (e) {
+    showToast("Error al ajustar stock.", "danger");
+  }
+}
+
+// Eliminar maquinaria
+async function eliminarMaquinaria(maquinariaId) {
+  if (!confirm("¿Deseas eliminar permanentemente esta maquinaria de la flota?")) return;
+  try {
+    const resp = await apiFetch(`/maquinarias/${maquinariaId}/`, { method: 'DELETE' });
+    if (resp.ok || resp.status === 204) {
+      showToast("Maquinaria eliminada de la flota.", "info");
+      await cargarMaquinariasInventario();
+      actualizarKPIs();
+    } else {
+      showToast("No se puede eliminar: tiene contratos históricos asociados.", "warning");
+    }
+  } catch (e) {
+    showToast("Error al eliminar maquinaria.", "danger");
+  }
+}
+
+// Formulario de creación de nueva maquinaria
+function configurarFormNuevaMaquinaria() {
+  document.getElementById('form-nueva-maquinaria').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      nombre: document.getElementById('nueva-maq-nombre').value,
+      categoria: document.getElementById('nueva-maq-cat').value,
+      tarifa_diaria: document.getElementById('nueva-maq-tarifa').value,
+      garantia_fija: document.getElementById('nueva-maq-garantia').value,
+      unidades_disponibles: document.getElementById('nueva-maq-stock').value,
+      imagen_url: document.getElementById('nueva-maq-img').value || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
+      descripcion: document.getElementById('nueva-maq-desc').value,
+    };
+
+    try {
+      const resp = await apiFetch('/maquinarias/', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      if (resp.ok) {
+        showToast("Maquinaria agregada a la flota exitosamente.", "success");
+        modalNuevaMaqInstance.hide();
+        document.getElementById('form-nueva-maquinaria').reset();
+        await cargarMaquinariasInventario();
+        actualizarKPIs();
+      } else {
+        const err = await resp.json();
+        showToast("Error al registrar maquinaria.", "danger");
+      }
+    } catch (e) {
+      showToast("Error de comunicación.", "danger");
+    }
+  });
+}
+</script>
+{% endblock %}

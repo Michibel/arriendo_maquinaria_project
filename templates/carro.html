@@ -1,0 +1,266 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Carro de Arriendo | RentaMaq Industrial{% endblock %}
+
+{% block content %}
+<section class="container py-5">
+  <!-- Encabezado del Carro -->
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h2 class="fw-bold mb-1 text-dark">
+        <i class="fa-solid fa-cart-flatbed text-warning me-2"></i>Carro de Arriendo Persistente
+      </h2>
+      <p class="text-muted mb-0 small">
+        Tus equipos y fechas seleccionadas se conservan automáticamente en la base de datos PostgreSQL.
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'catalogo' %}" class="btn btn-outline-dark">
+        <i class="fa-solid fa-arrow-left me-1"></i>Seguir Cotizando
+      </a>
+      <button id="btn-vaciar-carro" class="btn btn-outline-danger d-none">
+        <i class="fa-solid fa-trash-can me-1"></i>Vaciar Carro
+      </button>
+    </div>
+  </div>
+
+  <!-- Contenedor Principal: Ítems y Resumen -->
+  <div class="row g-4">
+    <!-- Columna de Ítems del Carro -->
+    <div class="col-lg-8">
+      <div class="card shadow-sm border-0 rounded-3">
+        <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+          <span class="fw-bold">
+            <i class="fa-solid fa-list-check text-warning me-2"></i>Equipos en Cotización
+          </span>
+          <span id="carro-total-badge" class="badge bg-warning text-dark">0 equipos</span>
+        </div>
+
+        <div class="card-body p-0">
+          <!-- Lista de ítems renderizados por JS -->
+          <div id="carro-items-list" class="divide-y">
+            <!-- Loading Spinner -->
+            <div class="text-center py-5 text-muted">
+              <div class="spinner-border text-warning mb-2" role="status"></div>
+              <div>Cargando carro persistente...</div>
+            </div>
+          </div>
+
+          <!-- Mensaje de Carro Vacío -->
+          <div id="carro-vacio-msg" class="text-center py-5 d-none">
+            <i class="fa-solid fa-cart-arrow-down fa-3x text-muted mb-3"></i>
+            <h4 class="fw-bold text-dark">Tu carro de arriendo está vacío</h4>
+            <p class="text-muted">Explora nuestro catálogo de maquinaria pesada y agrega los equipos para tu faena.</p>
+            <a href="{% url 'catalogo' %}" class="btn btn-industrial px-4 py-2 mt-2">
+              <i class="fa-solid fa-shapes me-2"></i>Explorar Catálogo
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Columna de Resumen de Pago y Checkout Atómico -->
+    <div class="col-lg-4">
+      <div class="card shadow-sm border-0 rounded-3 sticky-top" style="top: 90px;">
+        <div class="card-header bg-dark text-white py-3 border-bottom border-warning border-3">
+          <h5 class="fw-bold mb-0">
+            <i class="fa-solid fa-file-invoice-dollar text-warning me-2"></i>Resumen de Arriendo
+          </h5>
+        </div>
+
+        <div class="card-body p-4">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Subtotal Tarifas Diarias:</span>
+            <strong id="resumen-tarifas" class="text-dark">$0</strong>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Total Garantías Fijas:</span>
+            <strong id="resumen-garantias" class="text-dark">$0</strong>
+          </div>
+          <hr class="my-3">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <span class="fs-5 fw-bold text-dark">Total Contrato:</span>
+            <span id="resumen-total" class="fs-3 fw-bold text-warning">$0</span>
+          </div>
+
+          <!-- Advertencia de Regla de Negocio Crítica -->
+          <div class="alert alert-warning py-2 px-3 small border-start border-warning border-4 mb-4">
+            <i class="fa-solid fa-circle-exclamation me-1"></i>
+            <strong>Control de Stock Atómico:</strong> La flota no se descuenta al agregar al carro. Se reserva y descuenta únicamente al confirmar y pagar.
+          </div>
+
+          <!-- Botón de Checkout -->
+          <button id="btn-checkout" class="btn btn-industrial w-100 py-3 fw-bold fs-5 shadow-sm disabled">
+            <i class="fa-solid fa-credit-card me-2"></i>Confirmar y Pagar (Checkout)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/**
+ * LÓGICA ESPECÍFICA DEL CARRO PERSISTENTE Y CHECKOUT ATÓMICO
+ */
+let carroActual = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!Auth.isAuthenticated()) {
+    showToast("Por favor inicia sesión para consultar tu carro de arriendo.", "warning");
+    setTimeout(() => {
+      window.location.href = '/login/';
+    }, 1200);
+    return;
+  }
+  await cargarCarro();
+  configurarEventosCarro();
+});
+
+// Carga el carro persistente desde la base de datos
+async function cargarCarro() {
+  try {
+    const resp = await apiFetch('/carro-arriendo/');
+    if (resp.ok) {
+      carroActual = await resp.json();
+      renderizarCarro(carroActual);
+    } else {
+      showToast("Error al obtener la información del carro.", "danger");
+    }
+  } catch (e) {
+    console.error("Error al cargar carro:", e);
+  }
+}
+
+// Renderiza los ítems y los montos totales del carro
+function renderizarCarro(carro) {
+  const container = document.getElementById('carro-items-list');
+  const emptyMsg = document.getElementById('carro-vacio-msg');
+  const badgeTotal = document.getElementById('carro-total-badge');
+  const btnCheckout = document.getElementById('btn-checkout');
+  const btnVaciar = document.getElementById('btn-vaciar-carro');
+
+  const resumenTarifas = document.getElementById('resumen-tarifas');
+  const resumenGarantias = document.getElementById('resumen-garantias');
+  const resumenTotal = document.getElementById('resumen-total');
+
+  container.innerHTML = '';
+
+  const items = carro.items || [];
+  badgeTotal.textContent = `${items.length} ${items.length === 1 ? 'equipo' : 'equipos'}`;
+
+  if (items.length === 0) {
+    emptyMsg.classList.remove('d-none');
+    btnCheckout.classList.add('disabled');
+    btnVaciar.classList.add('d-none');
+    resumenTarifas.textContent = '$0';
+    resumenGarantias.textContent = '$0';
+    resumenTotal.textContent = '$0';
+    return;
+  }
+
+  emptyMsg.classList.add('d-none');
+  btnCheckout.classList.remove('disabled');
+  btnVaciar.classList.remove('d-none');
+
+  resumenTarifas.textContent = formatCLP(carro.subtotal_tarifas);
+  resumenGarantias.textContent = formatCLP(carro.total_garantias);
+  resumenTotal.textContent = formatCLP(carro.monto_total);
+
+  items.forEach(item => {
+    const maq = item.maquinaria;
+    const subtotalTarifas = Number(maq.tarifa_diaria) * item.dias_uso;
+
+    const itemHtml = `
+      <div class="p-3 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div class="d-flex align-items-center gap-3">
+          <img src="${maq.imagen_url || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80'}" 
+               alt="${maq.nombre}" class="rounded object-fit-cover" style="width: 70px; height: 70px;">
+          <div>
+            <h6 class="fw-bold mb-1 text-dark">${maq.nombre}</h6>
+            <div class="small text-muted mb-1">
+              <i class="fa-solid fa-calendar-days text-warning me-1"></i>
+              ${formatDate(item.fecha_inicio)} al ${formatDate(item.fecha_fin)} 
+              <span class="badge bg-light text-dark border ms-1">${item.dias_uso} ${item.dias_uso === 1 ? 'día' : 'días'}</span>
+            </div>
+            <div class="small text-muted">
+              Tarifa: <strong>${formatCLP(maq.tarifa_diaria)}/día</strong> | 
+              Garantía: <strong>${formatCLP(maq.garantia_fija)}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-4">
+          <div class="text-end">
+            <div class="fs-5 fw-bold text-dark">${formatCLP(item.costo_calculado)}</div>
+            <small class="text-muted d-block">${formatCLP(subtotalTarifas)} + garantía</small>
+          </div>
+          <button class="btn btn-outline-danger btn-sm" onclick="eliminarItemCarro(${item.id})" title="Quitar equipo">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        </div>
+      </div>
+    `;
+    container.insertAdjacentHTML('beforeend', itemHtml);
+  });
+}
+
+// Configura los botones de acción del carro
+function configurarEventosCarro() {
+  // Botón Vaciar Carro
+  document.getElementById('btn-vaciar-carro').addEventListener('click', async () => {
+    if (!confirm("¿Estás seguro de que deseas vaciar todos los equipos de tu carro?")) return;
+    try {
+      const resp = await apiFetch('/carro-arriendo/vaciar/', { method: 'POST' });
+      if (resp.ok) {
+        showToast("Carro vaciado exitosamente.", "info");
+        Cart.syncCounter();
+        await cargarCarro();
+      }
+    } catch (e) {
+      showToast("Error al vaciar el carro.", "danger");
+    }
+  });
+
+  // Botón Checkout Atómico
+  document.getElementById('btn-checkout').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-checkout');
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Procesando arriendo y stock...`;
+
+    try {
+      const resp = await apiFetch('/contratos/checkout/', { method: 'POST' });
+      const data = await resp.json();
+
+      if (resp.ok) {
+        showToast("¡Arriendo confirmado y pagado con éxito!", "success");
+        Cart.syncCounter();
+        setTimeout(() => {
+          window.location.href = '/mis-contratos/';
+        }, 1500);
+      } else {
+        const errorMsg = data.error || data.detail || "No fue posible procesar el arriendo.";
+        showToast(errorMsg, "danger");
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-credit-card me-2"></i>Confirmar y Pagar (Checkout)`;
+      }
+    } catch (e) {
+      showToast("Error de conexión al procesar el checkout.", "danger");
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa-solid fa-credit-card me-2"></i>Confirmar y Pagar (Checkout)`;
+    }
+  });
+}
+
+// Eliminar ítem individual
+async function eliminarItemCarro(itemId) {
+  const ok = await Cart.removeItem(itemId);
+  if (ok) {
+    await cargarCarro();
+  }
+}
+</script>
+{% endblock %}

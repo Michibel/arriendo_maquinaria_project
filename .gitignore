@@ -1,0 +1,34 @@
+# Entornos virtuales Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Byte-code compilado
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Archivos de base de datos local
+*.sqlite3
+*.db
+
+# Archivos estáticos recolectados
+/staticfiles/
+
+# Logs y temporales
+*.log
+local_settings.py
+.env
+
+# Editores de código
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema operativo
+Thumbs.db
+Desktop.ini
+.DS_Store

@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mis Contratos de Arriendo | RentaMaq Industrial{% endblock %}
+
+{% block content %}
+<section class="container py-5">
+  <!-- Encabezado de la página -->
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h2 class="fw-bold mb-1 text-dark">
+        <i class="fa-solid fa-file-contract text-warning me-2"></i>Historial de Mis Arriendos
+      </h2>
+      <p class="text-muted mb-0 small">
+        Registro histórico con precios congelados, fechas pactadas y estado operativo de la maquinaria.
+      </p>
+    </div>
+    <div>
+      <a href="{% url 'catalogo' %}" class="btn btn-industrial px-3 py-2 fw-bold">
+        <i class="fa-solid fa-plus me-1"></i>Nuevo Arriendo
+      </a>
+    </div>
+  </div>
+
+  <!-- Contenedor de Contratos -->
+  <div id="contratos-list" class="space-y-4">
+    <!-- Spinner de carga -->
+    <div class="card shadow-sm border-0 rounded-3 text-center py-5 text-muted">
+      <div class="spinner-border text-warning mb-2" role="status"></div>
+      <div>Cargando historial de arriendos...</div>
+    </div>
+  </div>
+
+  <!-- Mensaje de no contratos -->
+  <div id="no-contratos-msg" class="card shadow-sm border-0 rounded-3 text-center py-5 d-none">
+    <i class="fa-solid fa-folder-open fa-3x text-muted mb-3"></i>
+    <h4 class="fw-bold text-dark">Aún no registras contratos de arriendo</h4>
+    <p class="text-muted">Cuando confirmes tu primer arriendo desde el carro, podrás realizar seguimiento en este panel.</p>
+    <div>
+      <a href="{% url 'catalogo' %}" class="btn btn-industrial px-4 py-2 mt-2">
+        <i class="fa-solid fa-shapes me-1"></i>Ir al Catálogo
+      </a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/**
+ * LÓGICA DE HISTORIAL DE CONTRATOS (MIS CONTRATOS)
+ */
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!Auth.isAuthenticated()) {
+    showToast("Debes iniciar sesión para consultar tus contratos.", "warning");
+    setTimeout(() => {
+      window.location.href = '/login/';
+    }, 1200);
+    return;
+  }
+  await cargarMisContratos();
+});
+
+async function cargarMisContratos() {
+  const container = document.getElementById('contratos-list');
+  const noDataMsg = document.getElementById('no-contratos-msg');
+
+  try {
+    const resp = await apiFetch('/mis-contratos/');
+    if (!resp.ok) {
+      container.innerHTML = `
+        <div class="alert alert-danger">No se pudo cargar el historial de contratos.</div>
+      `;
+      return;
+    }
+
+    const contratos = await resp.json();
+    container.innerHTML = '';
+
+    if (contratos.length === 0) {
+      noDataMsg.classList.remove('d-none');
+      return;
+    }
+    noDataMsg.classList.add('d-none');
+
+    contratos.forEach(con => {
+      const fechaCreacion = new Date(con.fecha_creacion).toLocaleString('es-CL');
+      const detalles = con.detalles || [];
+
+      let detallesHtml = '';
+      detalles.forEach(d => {
+        detallesHtml += `
+          <tr class="align-middle">
+            <td class="fw-bold text-dark">${d.nombre_maquinaria}</td>
+            <td class="small text-muted">
+              ${formatDate(d.fecha_inicio)} al ${formatDate(d.fecha_fin)}
+              <span class="badge bg-light text-dark border ms-1">${d.dias_uso} ${d.dias_uso === 1 ? 'día' : 'días'}</span>
+            </td>
+            <td>${formatCLP(d.tarifa_diaria)} / día</td>
+            <td>${formatCLP(d.garantia_fija)}</td>
+            <td class="text-end fw-bold text-dark">${formatCLP(d.subtotal)}</td>
+          </tr>
+        `;
+      });
+
+      const badgeEstadoClass = `badge-estado-${con.estado}`;
+
+      const cardHtml = `
+        <div class="card shadow-sm border-0 rounded-3 mb-4 overflow-hidden">
+          <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+              <span class="fw-bold fs-5 text-warning">Contrato #${con.id}</span>
+              <span class="badge ${badgeEstadoClass} px-3 py-1 fs-6">${con.estado}</span>
+            </div>
+            <div class="small text-white-50">
+              <i class="fa-regular fa-clock me-1"></i>Emitido: ${fechaCreacion}
+            </div>
+          </div>
+
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead class="table-light small text-uppercase">
+                  <tr>
+                    <th>Equipo Arrendado</th>
+                    <th>Período de Faena</th>
+                    <th>Tarifa Diaria (Congelada)</th>
+                    <th>Garantía (Congelada)</th>
+                    <th class="text-end">Subtotal Facturado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${detallesHtml}
+                </tbody>
+                <tfoot class="table-light">
+                  <tr>
+                    <td colspan="4" class="text-end fw-bold fs-5">Monto Total del Contrato:</td>
+                    <td class="text-end fw-bold fs-5 text-warning">${formatCLP(con.monto_total)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', cardHtml);
+    });
+  } catch (e) {
+    console.error("Error al cargar contratos:", e);
+    container.innerHTML = `
+      <div class="alert alert-danger">Error de comunicación con el servidor.</div>
+    `;
+  }
+}
+</script>
+{% endblock %}

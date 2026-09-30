@@ -1,0 +1,234 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Iniciar Sesión | RentaMaq Industrial{% endblock %}
+
+{% block content %}
+<section class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6 col-xl-5">
+      <!-- Acceso Rápido para Evaluación Docente -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white border-top border-warning border-4">
+        <div class="card-body p-4 text-center">
+          <h6 class="fw-bold text-dark mb-2">
+            <i class="fa-solid fa-wand-magic-sparkles text-warning me-1"></i>Acceso Rápido para Evaluación
+          </h6>
+          <p class="small text-muted mb-3">
+            Haz clic en un perfil para iniciar sesión inmediatamente con sus credenciales y permisos RBAC:
+          </p>
+          <div class="d-grid gap-2">
+            <button class="btn btn-outline-warning text-dark fw-bold btn-sm py-2" onclick="loginRapido('ejecutivo', 'admin123')">
+              <i class="fa-solid fa-user-shield me-1 text-warning"></i>Ejecutivo de Arriendos (Gestor / Admin)
+            </button>
+            <button class="btn btn-outline-primary fw-bold btn-sm py-2" onclick="loginRapido('constructora_vial', '123456')">
+              <i class="fa-solid fa-helmet-safety me-1 text-primary"></i>Empresa Constructora (Cliente)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tarjeta Principal con Pestañas de Login y Registro -->
+      <div class="card border-0 shadow-lg rounded-3 overflow-hidden">
+        <div class="card-header bg-dark text-white p-0">
+          <ul class="nav nav-tabs nav-fill border-0" id="authTabs" role="tablist">
+            <li class="nav-item">
+              <button class="nav-link active py-3 fw-bold text-white border-0 rounded-0" id="tab-login-btn" data-bs-toggle="tab" data-bs-target="#tab-login" type="button">
+                <i class="fa-solid fa-arrow-right-to-bracket me-1"></i>Iniciar Sesión
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link py-3 fw-bold text-white-50 border-0 rounded-0" id="tab-reg-btn" data-bs-toggle="tab" data-bs-target="#tab-reg" type="button">
+                <i class="fa-solid fa-user-plus me-1"></i>Registrar Empresa
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card-body p-4 p-md-5">
+          <div class="tab-content" id="authTabsContent">
+            <!-- TAB 1: FORMULARIO DE LOGIN -->
+            <div class="tab-pane fade show active" id="tab-login" role="tabpanel">
+              <form id="form-login">
+                <div class="mb-3">
+                  <label for="login-username" class="form-label fw-bold small">Usuario o Empresa</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="fa-solid fa-user text-muted"></i></span>
+                    <input type="text" id="login-username" class="form-control" required placeholder="ejecutivo o constructora_vial">
+                  </div>
+                </div>
+
+                <div class="mb-4">
+                  <label for="login-password" class="form-label fw-bold small">Contraseña</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="fa-solid fa-lock text-muted"></i></span>
+                    <input type="password" id="login-password" class="form-control" required placeholder="••••••••">
+                  </div>
+                </div>
+
+                <button type="submit" id="btn-submit-login" class="btn btn-industrial w-100 py-2 fw-bold fs-6 shadow-sm">
+                  <i class="fa-solid fa-arrow-right-to-bracket me-2"></i>Ingresar a RentaMaq
+                </button>
+              </form>
+            </div>
+
+            <!-- TAB 2: FORMULARIO DE REGISTRO -->
+            <div class="tab-pane fade" id="tab-reg" role="tabpanel">
+              <form id="form-registro">
+                <div class="mb-3">
+                  <label class="form-label fw-bold small">Nombre de Usuario</label>
+                  <input type="text" id="reg-username" class="form-control" required placeholder="Ej: constructora_norte">
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label fw-bold small">Razón Social de la Empresa</label>
+                  <input type="text" id="reg-razon" class="form-control" required placeholder="Ej: Constructora Norte SpA">
+                </div>
+
+                <div class="row g-2 mb-3">
+                  <div class="col-6">
+                    <label class="form-label fw-bold small">RUT Empresa</label>
+                    <input type="text" id="reg-rut" class="form-control" required placeholder="76.543.210-K">
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label fw-bold small">Teléfono</label>
+                    <input type="text" id="reg-telefono" class="form-control" placeholder="+56 9 ...">
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label fw-bold small">Correo Electrónico</label>
+                  <input type="email" id="reg-email" class="form-control" required placeholder="contacto@empresa.cl">
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label fw-bold small">Rol en el Sistema</label>
+                  <select id="reg-rol" class="form-select" required>
+                    <option value="EMPRESA_CONSTRUCTORA" selected>Empresa Constructora (Cliente)</option>
+                    <option value="EJECUTIVO_ARRIENDOS">Ejecutivo de Arriendos (Gestor)</option>
+                  </select>
+                </div>
+
+                <div class="mb-4">
+                  <label class="form-label fw-bold small">Contraseña</label>
+                  <input type="password" id="reg-password" class="form-control" required minlength="4" placeholder="••••••••">
+                </div>
+
+                <button type="submit" id="btn-submit-reg" class="btn btn-industrial w-100 py-2 fw-bold">
+                  <i class="fa-solid fa-check me-2"></i>Crear Cuenta
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/**
+ * LÓGICA DE AUTENTICACIÓN Y REGISTRO JWT
+ */
+document.addEventListener('DOMContentLoaded', () => {
+  // Manejador del formulario de Login
+  document.getElementById('form-login').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const user = document.getElementById('login-username').value.trim();
+    const pass = document.getElementById('login-password').value;
+    await procesarLogin(user, pass);
+  });
+
+  // Manejador del formulario de Registro
+  document.getElementById('form-registro').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      username: document.getElementById('reg-username').value.trim(),
+      razon_social: document.getElementById('reg-razon').value.trim(),
+      rut_empresa: document.getElementById('reg-rut').value.trim(),
+      telefono: document.getElementById('reg-telefono').value.trim(),
+      email: document.getElementById('reg-email').value.trim(),
+      rol: document.getElementById('reg-rol').value,
+      password: document.getElementById('reg-password').value,
+    };
+
+    const btn = document.getElementById('btn-submit-reg');
+    btn.disabled = true;
+    btn.textContent = "Registrando...";
+
+    try {
+      const resp = await apiFetch('/auth/register/', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      const data = await resp.json();
+
+      if (resp.ok) {
+        showToast("¡Cuenta creada exitosamente! Iniciando sesión...", "success");
+        await procesarLogin(payload.username, payload.password);
+      } else {
+        const errorMsg = data.username ? data.username[0] : (data.detail || "Error en el registro.");
+        showToast(errorMsg, "danger");
+        btn.disabled = false;
+        btn.textContent = "Crear Cuenta";
+      }
+    } catch (e) {
+      showToast("Error de conexión al registrarse.", "danger");
+      btn.disabled = false;
+      btn.textContent = "Crear Cuenta";
+    }
+  });
+});
+
+async function procesarLogin(username, password) {
+  const btn = document.getElementById('btn-submit-login');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Verificando credenciales...`;
+  }
+
+  try {
+    const resp = await fetch('/api/auth/login/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await resp.json();
+
+    if (resp.ok && data.access) {
+      Auth.setAuth({ access: data.access, refresh: data.refresh }, data.usuario);
+      showToast(`¡Bienvenido(a), ${data.usuario.nombre_completo || data.usuario.username}!`, "success");
+
+      setTimeout(() => {
+        if (data.usuario.es_ejecutivo) {
+          window.location.href = '/panel/';
+        } else {
+          window.location.href = '/catalogo/';
+        }
+      }, 900);
+    } else {
+      const msg = data.detail || "Usuario o contraseña incorrectos.";
+      showToast(msg, "danger");
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-arrow-right-to-bracket me-2"></i>Ingresar a RentaMaq`;
+      }
+    }
+  } catch (e) {
+    showToast("Error de conexión con el servidor.", "danger");
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa-solid fa-arrow-right-to-bracket me-2"></i>Ingresar a RentaMaq`;
+    }
+  }
+}
+
+// Botón de 1-click login para pruebas
+function loginRapido(usuario, password) {
+  document.getElementById('login-username').value = usuario;
+  document.getElementById('login-password').value = password;
+  procesarLogin(usuario, password);
+}
+</script>
+{% endblock %}
