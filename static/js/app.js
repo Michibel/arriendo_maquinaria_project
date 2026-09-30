@@ -45,6 +45,8 @@ const Auth = {
     if (tokens.access) localStorage.setItem(STORAGE_ACCESS_TOKEN, tokens.access);
     if (tokens.refresh) localStorage.setItem(STORAGE_REFRESH_TOKEN, tokens.refresh);
     if (usuario) localStorage.setItem(STORAGE_USER_DATA, JSON.stringify(usuario));
+    // Limpiar carro temporal de invitado: ahora el usuario pasa a su carro persistente en PostgreSQL
+    Cart.clearGuestCart();
     this.syncNavbarUI();
   },
 
@@ -52,6 +54,8 @@ const Auth = {
     localStorage.removeItem(STORAGE_ACCESS_TOKEN);
     localStorage.removeItem(STORAGE_REFRESH_TOKEN);
     localStorage.removeItem(STORAGE_USER_DATA);
+    // Limpiar cualquier carro temporal para no dejar datos persistentes
+    Cart.clearGuestCart();
     this.syncNavbarUI();
   },
 
@@ -200,7 +204,12 @@ function formatDate(fechaStr) {
 const Cart = {
   getGuestCart() {
     try {
-      const data = localStorage.getItem(STORAGE_GUEST_CART);
+      // Eliminar residuo previo de localStorage si existía para evitar persistencia indebida
+      if (localStorage.getItem(STORAGE_GUEST_CART)) {
+        localStorage.removeItem(STORAGE_GUEST_CART);
+      }
+      // El carro de invitado es ESTRICTAMENTE TEMPORAL: se almacena sólo en la sesión activa (sessionStorage)
+      const data = sessionStorage.getItem(STORAGE_GUEST_CART);
       return data ? JSON.parse(data) : [];
     } catch (e) {
       return [];
@@ -208,11 +217,14 @@ const Cart = {
   },
 
   setGuestCart(items) {
-    localStorage.setItem(STORAGE_GUEST_CART, JSON.stringify(items));
+    // Almacenamiento no persistente de sesión (se destruye al cerrar el navegador)
+    sessionStorage.setItem(STORAGE_GUEST_CART, JSON.stringify(items));
+    localStorage.removeItem(STORAGE_GUEST_CART);
     this.syncCounter();
   },
 
   clearGuestCart() {
+    sessionStorage.removeItem(STORAGE_GUEST_CART);
     localStorage.removeItem(STORAGE_GUEST_CART);
     this.syncCounter();
   },
@@ -332,6 +344,9 @@ const Cart = {
 // BLOQUE 6: INICIALIZACIÓN GLOBAL AL CARGAR EL DOM
 // ============================================================================
 document.addEventListener('DOMContentLoaded', () => {
+  // Asegurar que no quede residuo persistente en localStorage: el carro sólo persiste si el usuario está logueado
+  localStorage.removeItem(STORAGE_GUEST_CART);
+
   // Sincronizar estado visual de autenticación
   Auth.syncNavbarUI();
 

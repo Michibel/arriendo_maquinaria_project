@@ -253,10 +253,10 @@ function actualizarEncabezadoModo() {
   }
 }
 
-// Carga el carro (Persistente desde API o Temporal desde localStorage)
+// Carga el carro (Persistente desde API PostgreSQL o Temporal de sesión desde sessionStorage)
 async function cargarCarro() {
   if (Auth.isAuthenticated()) {
-    // MODO AUTENTICADO: Consultar PostgreSQL vía API
+    // MODO AUTENTICADO: Consultar PostgreSQL vía API (Carro Persistente)
     try {
       const resp = await apiFetch('/carro-arriendo/');
       if (resp.ok) {
@@ -269,7 +269,7 @@ async function cargarCarro() {
       console.error("Error al cargar carro persistente:", e);
     }
   } else {
-    // MODO INVITADO: Leer carro temporal de localStorage
+    // MODO INVITADO: Leer carro temporal volátil de sesión (sessionStorage)
     const itemsInvitado = Cart.getGuestCart();
     
     // Calcular subtotales locales
@@ -484,7 +484,7 @@ function configurarEventosCarro() {
           // Ocultar modal de formulario
           if (modalCheckoutInvitadoBs) modalCheckoutInvitadoBs.hide();
 
-          // Limpiar el carro temporal de localStorage
+          // Limpiar el carro temporal de sessionStorage
           Cart.clearGuestCart();
 
           // Mostrar modal de éxito
