@@ -2,7 +2,7 @@
  * ============================================================================
  * PROYECTO 6: ARRIENDO DE MAQUINARIA DE CONSTRUCCIÓN (RENTING / SERVICIOS)
  * MÓDULO FRONTEND: CLIENTE ES6 Y GESTIÓN DE ESTADO (app.js)
- * Autor: Gabriel Michibel | Sección: DGY2102 | Año: 2026
+ * Autor: Gabriel Michibel | Sección: IEC-N4-C1 | Año: 2026
  * ============================================================================
  * Este archivo implementa:
  * 1. Gestión transparente de tokens JWT (Storage, Inyección de Bearer Header)

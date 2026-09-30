@@ -2,7 +2,7 @@
 ================================================================================
 PROYECTO 6: ARRIENDO DE MAQUINARIA DE CONSTRUCCIÓN (RENTING / SERVICIOS)
 EVALUACIÓN 2 - DESARROLLO BACKEND & FRONTEND WEB
-Estudiante: Gabriel Michibel | Sección: DGY2102 | Año: 2026
+Estudiante: Gabriel Michibel | Sección: IEC-N4-C1 | Año: 2026
 Base de Datos: PostgreSQL Nativo (puerto 5432)
 ================================================================================
 """

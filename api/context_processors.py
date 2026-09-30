@@ -13,8 +13,8 @@ def datos_alumno_footer(request):
     """
     return {
         'ALUMNO_NOMBRE': 'Gabriel Michibel',
-        'ALUMNO_SECCION': 'Sección DGY2102',
+        'ALUMNO_SECCION': 'Sección IEC-N4-C1',
         'ALUMNO_ANIO': 'Año 2026',
         'PROYECTO_NOMBRE': 'Proyecto 6: Arriendo de Maquinaria de Construcción',
-        'FOOTER_TEXTO': 'Gabriel Michibel | Sección DGY2102 | Año 2026',
+        'FOOTER_TEXTO': 'Gabriel Michibel | Sección IEC-N4-C1 | Año 2026',
     }

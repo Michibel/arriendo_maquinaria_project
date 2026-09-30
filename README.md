@@ -2,7 +2,7 @@
 ## Evaluación 2 (EVA-2) - Arquitectura y Desarrollo Backend & Frontend
 
 **Estudiante:** Gabriel Michibel  
-**Sección:** DGY2102  
+**Sección:** IEC-N4-C1  
 **Año:** 2026  
 **Institución:** Duoc UC  
 
@@ -142,4 +142,4 @@ python manage.py test api
 
 ---
 **Pie de página:**  
-`Gabriel Michibel | Sección DGY2102 | Año 2026`
+`Gabriel Michibel | Sección IEC-N4-C1 | Año 2026`
