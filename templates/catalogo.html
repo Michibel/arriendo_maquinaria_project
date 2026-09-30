@@ -29,6 +29,19 @@
   </div>
 </section>
 
+<!-- Banner Dinámico para el Administrador / Ejecutivo Conectado -->
+<div id="banner-admin-conectado" class="alert alert-warning py-3 px-4 border-0 rounded-0 mb-0 d-none text-center shadow-sm">
+  <div class="container d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <i class="fa-solid fa-user-shield me-2 fs-5 text-dark"></i>
+      <strong>Sesión de Administrador detectada:</strong> Tienes acceso al módulo gerencial de estadísticas, comparativas y flota.
+    </div>
+    <a href="{% url 'panel_ejecutivo_web' %}" class="btn btn-dark btn-sm fw-bold px-3">
+      <i class="fa-solid fa-chart-pie text-warning me-1"></i>Abrir Dashboard Ejecutivo
+    </a>
+  </div>
+</div>
+
 <!-- ========================================================================
      SECCIÓN DE FILTROS EN TIEMPO REAL
      ======================================================================== -->
@@ -185,6 +198,10 @@ let modalArriendoInstance = null;
 let maquinariaSeleccionada = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
+  if (Auth.isEjecutivo()) {
+    const banner = document.getElementById('banner-admin-conectado');
+    if (banner) banner.classList.remove('d-none');
+  }
   modalArriendoInstance = new bootstrap.Modal(document.getElementById('modalArriendo'));
   inicializarFechasModal();
   await cargarCategorias();

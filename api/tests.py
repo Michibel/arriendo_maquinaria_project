@@ -203,3 +203,20 @@ class RentingMaquinariaTests(TestCase):
         # 3. El stock debe haberse reincorporado a 2
         self.maquinaria.refresh_from_db()
         self.assertEqual(self.maquinaria.unidades_disponibles, 2)
+
+    def test_07_dashboard_ejecutivo_stats(self):
+        """El endpoint del Dashboard Ejecutivo debe retornar KPIs, más vendidos y comparativas."""
+        # 1. Sin autenticación o con cliente no debe permitir acceso
+        self.client.force_authenticate(user=self.constructora)
+        resp_cliente = self.client.get('/api/dashboard/stats/')
+        self.assertEqual(resp_cliente.status_code, status.HTTP_403_FORBIDDEN)
+
+        # 2. Con Ejecutivo debe retornar 200 OK con estructura completa
+        self.client.force_authenticate(user=self.ejecutivo)
+        resp = self.client.get('/api/dashboard/stats/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIn('kpis', resp.data)
+        self.assertIn('mas_vendidos', resp.data)
+        self.assertIn('produccion_mensual', resp.data)
+        self.assertIn('comparacion_mensual', resp.data)
+        self.assertIn('comparacion_trimestral', resp.data)

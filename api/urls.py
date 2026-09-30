@@ -30,6 +30,7 @@ from .views import (
     CheckoutContratoView,
     MisContratosListView,
     ContratoViewSet,
+    DashboardStatsView,
 )
 
 app_name = 'api'
@@ -61,6 +62,7 @@ urlpatterns = [
     # --------------------------------------------------------------------------
     path('contratos/checkout/', CheckoutContratoView.as_view(), name='contratos_checkout'),
     path('mis-contratos/', MisContratosListView.as_view(), name='mis_contratos'),
+    path('dashboard/stats/', DashboardStatsView.as_view(), name='dashboard_stats'),
 
     # --------------------------------------------------------------------------
     # 4. RUTAS DEL ROUTER (Maquinarias, Categorías, Contratos Ejecutivos)

@@ -45,6 +45,13 @@ Plataforma web integral para la gestión y arriendo de maquinarias pesadas y equ
    - **Empresa Constructora (Cliente):** Administrar su propio carro, checkout y consultar "Mis Arriendos".
    - **Ejecutivo de Arriendos (Gestor/Admin):** CRUD completo de maquinarias, modificar stock y cambiar estado de contratos de cualquier cliente.
 
+6. **Dashboard Ejecutivo Gerencial (Chart.js & Analytics):**
+   - **Cosas más vendidas:** Ranking y gráfico Doughnut con las maquinarias más solicitadas, días acumulados en faena y total facturado.
+   - **Producción mensual:** Gráfico mixto de barras y línea con la facturación mes a mes y volumen de contratos del año 2026.
+   - **Comparaciones mensuales:** Mes actual vs mes anterior con cálculo de variación porcentual (+/- X%) e indicadores visuales de tendencia.
+   - **Comparaciones trimestrales:** Análisis comparativo de ingresos y arriendos por trimestres (Q1, Q2, Q3, Q4).
+   - **Redirección automática:** Al iniciar sesión como Ejecutivo/Administrador, el sistema redirige automáticamente a `/panel/`.
+
 ---
 
 ## 🚀 Guía de Instalación y Ejecución Local

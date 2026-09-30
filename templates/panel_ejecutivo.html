@@ -1,126 +1,281 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Panel Ejecutivo de Arriendos | RentaMaq Industrial{% endblock %}
+{% block title %}Dashboard Ejecutivo de Arriendos | RentaMaq Industrial{% endblock %}
+
+{% block extra_css %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  .kpi-card {
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+    border: none;
+    transition: transform 0.2s ease;
+  }
+  .kpi-card:hover {
+    transform: translateY(-3px);
+  }
+  .chart-container-box {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+    height: 100%;
+  }
+  .top-item-badge {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: 800;
+    font-size: 0.85rem;
+  }
+  .badge-top-1 { background: #f59e0b; color: #ffffff; }
+  .badge-top-2 { background: #94a3b8; color: #ffffff; }
+  .badge-top-3 { background: #b45309; color: #ffffff; }
+  .badge-top-n { background: #e2e8f0; color: #475569; }
+</style>
+{% endblock %}
 
 {% block content %}
 <section class="container-fluid px-lg-5 py-4">
-  <!-- Encabezado de la Consola Ejecutiva -->
+
+  <!-- ========================================================================
+       ENCABEZADO DE LA CONSOLA EJECUTIVA
+       ======================================================================== -->
   <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <div>
-      <span class="badge bg-warning text-dark fw-bold mb-1">MÓDULO DE ADMINISTRACIÓN (RBAC)</span>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <span class="badge bg-warning text-dark fw-bold">CONSOLA GERENCIAL (RBAC)</span>
+        <span class="badge bg-dark text-white"><i class="fa-solid fa-clock me-1"></i>Tiempo Real</span>
+      </div>
       <h2 class="fw-bold mb-0 text-dark">
-        <i class="fa-solid fa-gauge-high text-warning me-2"></i>Panel del Ejecutivo de Arriendos
+        <i class="fa-solid fa-chart-pie text-warning me-2"></i>Dashboard Ejecutivo de Arriendos
       </h2>
       <p class="text-muted small mb-0">
-        Supervisión de contratos, control transaccional de stock de flota y mantenimiento del catálogo.
+        Supervisión analítica de producción mensual, comparativas trimestrales, equipos líderes en arriendo y control de flota.
       </p>
     </div>
     <div class="d-flex gap-2">
       <button class="btn btn-industrial fw-bold" data-bs-toggle="modal" data-bs-target="#modalNuevaMaquinaria">
         <i class="fa-solid fa-plus-circle me-1"></i>Nueva Maquinaria
       </button>
-      <button class="btn btn-outline-dark" onclick="cargarTodoElPanel()">
-        <i class="fa-solid fa-rotate me-1"></i>Actualizar
+      <button class="btn btn-outline-dark" onclick="cargarDashboardCompleto()">
+        <i class="fa-solid fa-rotate me-1"></i>Refrescar Datos
       </button>
     </div>
   </div>
 
-  <!-- Tarjetas KPI Industriales -->
+  <!-- ========================================================================
+       1. TARJETAS KPI DE ALTO IMPACTO EJECUTIVO
+       ======================================================================== -->
   <div class="row g-3 mb-4">
+    <!-- Recaudación Total -->
     <div class="col-sm-6 col-xl-3">
-      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-warning border-4">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <div class="text-muted small fw-bold">TOTAL CONTRATOS</div>
-            <div id="kpi-total-contratos" class="fs-3 fw-bold text-dark">0</div>
+      <div class="kpi-card p-3 border-start border-warning border-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="text-muted small fw-bold text-uppercase">Facturación Acumulada</span>
+          <div class="bg-warning-subtle text-warning p-2 rounded-circle">
+            <i class="fa-solid fa-sack-dollar fa-lg"></i>
           </div>
-          <div class="bg-light p-3 rounded-circle text-warning">
-            <i class="fa-solid fa-file-contract fa-xl"></i>
-          </div>
+        </div>
+        <div id="kpi-total-ingresos" class="fs-3 fw-bold text-dark">$0</div>
+        <div id="kpi-variacion-badge" class="small text-muted mt-1">
+          Cargando tendencia...
         </div>
       </div>
     </div>
 
+    <!-- Comparación Mensual: Mes Actual vs Anterior -->
     <div class="col-sm-6 col-xl-3">
-      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-success border-4">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <div class="text-muted small fw-bold">ARRIENDOS ACTIVOS</div>
-            <div id="kpi-arriendos-activos" class="fs-3 fw-bold text-success">0</div>
+      <div class="kpi-card p-3 border-start border-success border-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="text-muted small fw-bold text-uppercase">Producción Este Mes</span>
+          <div class="bg-success-subtle text-success p-2 rounded-circle">
+            <i class="fa-solid fa-calendar-check fa-lg"></i>
           </div>
-          <div class="bg-light p-3 rounded-circle text-success">
-            <i class="fa-solid fa-truck-moving fa-xl"></i>
-          </div>
+        </div>
+        <div id="kpi-mes-actual-monto" class="fs-3 fw-bold text-success">$0</div>
+        <div id="kpi-comparacion-mes-texto" class="small text-muted mt-1">
+          vs Mes Anterior: <strong id="kpi-mes-anterior-monto">$0</strong>
         </div>
       </div>
     </div>
 
+    <!-- Tasa de Ocupación de Flota -->
     <div class="col-sm-6 col-xl-3">
-      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-info border-4">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <div class="text-muted small fw-bold">UNIDADES EN FLOTA</div>
-            <div id="kpi-unidades-flota" class="fs-3 fw-bold text-info">0</div>
+      <div class="kpi-card p-3 border-start border-info border-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="text-muted small fw-bold text-uppercase">Ocupación de Flota</span>
+          <div class="bg-info-subtle text-info p-2 rounded-circle">
+            <i class="fa-solid fa-truck-ramp-box fa-lg"></i>
           </div>
-          <div class="bg-light p-3 rounded-circle text-info">
-            <i class="fa-solid fa-boxes-stacked fa-xl"></i>
-          </div>
+        </div>
+        <div id="kpi-ocupacion" class="fs-3 fw-bold text-info">0%</div>
+        <div class="progress mt-2" style="height: 6px;">
+          <div id="kpi-ocupacion-bar" class="progress-bar bg-info" role="progressbar" style="width: 0%"></div>
+        </div>
+        <div class="d-flex justify-content-between small text-muted mt-1">
+          <span><span id="kpi-arriendos-activos">0</span> en faena</span>
+          <span><span id="kpi-flota-disponible">0</span> disponibles</span>
         </div>
       </div>
     </div>
 
+    <!-- Ticket Promedio por Contrato -->
     <div class="col-sm-6 col-xl-3">
-      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-primary border-4">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <div class="text-muted small fw-bold">RECAUDACIÓN TOTAL</div>
-            <div id="kpi-recaudacion" class="fs-3 fw-bold text-primary">$0</div>
+      <div class="kpi-card p-3 border-start border-primary border-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="text-muted small fw-bold text-uppercase">Ticket Promedio</span>
+          <div class="bg-primary-subtle text-primary p-2 rounded-circle">
+            <i class="fa-solid fa-receipt fa-lg"></i>
           </div>
-          <div class="bg-light p-3 rounded-circle text-primary">
-            <i class="fa-solid fa-hand-holding-dollar fa-xl"></i>
-          </div>
+        </div>
+        <div id="kpi-ticket-promedio" class="fs-3 fw-bold text-primary">$0</div>
+        <div class="small text-muted mt-1">
+          Basado en <strong id="kpi-total-contratos">0</strong> contratos emitidos
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Pestañas de Navegación del Panel -->
-  <ul class="nav nav-tabs mb-4 border-bottom border-warning border-2" id="panelTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-      <button class="nav-link active fw-bold text-dark" id="tab-contratos-btn" data-bs-toggle="tab" data-bs-target="#tab-contratos" type="button" role="tab">
-        <i class="fa-solid fa-list-check me-2 text-warning"></i>Gestión de Contratos y Reposición de Flota
+  <!-- ========================================================================
+       2. SECCIÓN DE GRÁFICOS ANALÍTICOS (PRODUCCIÓN & COSAS MÁS VENDIDAS)
+       ======================================================================== -->
+  <div class="row g-4 mb-4">
+    <!-- Gráfico 1: Producción y Recaudación Mensual -->
+    <div class="col-lg-8">
+      <div class="chart-container-box">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+          <div>
+            <h5 class="fw-bold mb-0 text-dark">
+              <i class="fa-solid fa-chart-column text-warning me-2"></i>Producción Mensual (Recaudación y Contratos)
+            </h5>
+            <small class="text-muted">Evolución de ingresos facturados mes a mes del año en curso</small>
+          </div>
+          <span class="badge bg-light text-dark border">
+            <i class="fa-solid fa-calendar me-1 text-warning"></i>Año 2026
+          </span>
+        </div>
+        <div style="position: relative; height: 320px;">
+          <canvas id="chartProduccionMensual"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gráfico 2: Cosas Más Vendidas / Arrendadas (Doughnut Chart) -->
+    <div class="col-lg-4">
+      <div class="chart-container-box">
+        <div class="mb-3">
+          <h5 class="fw-bold mb-0 text-dark">
+            <i class="fa-solid fa-trophy text-warning me-2"></i>Equipos Más Solicitados
+          </h5>
+          <small class="text-muted">Distribución de las cosas más vendidas / arrendadas</small>
+        </div>
+        <div style="position: relative; height: 260px;">
+          <canvas id="chartMasVendidos"></canvas>
+        </div>
+        <div id="chart-mas-vendidos-legend" class="mt-3 small text-muted text-center"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       3. SECCIÓN COMPARATIVA TRIMESTRAL Y TABLA DE MÁS VENDIDOS
+       ======================================================================== -->
+  <div class="row g-4 mb-4">
+    <!-- Comparación Trimestral (Q1, Q2, Q3, Q4) -->
+    <div class="col-lg-5">
+      <div class="chart-container-box">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h5 class="fw-bold mb-0 text-dark">
+              <i class="fa-solid fa-chart-simple text-warning me-2"></i>Comparación Trimestral
+            </h5>
+            <small class="text-muted">Rendimiento comparativo por trimestres (Q1 - Q4)</small>
+          </div>
+          <span class="badge bg-warning text-dark fw-bold">Trimestres</span>
+        </div>
+        <div style="position: relative; height: 280px;">
+          <canvas id="chartComparacionTrimestral"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla Detallada: Cosas Más Vendidas (Ranking de Maquinarias) -->
+    <div class="col-lg-7">
+      <div class="chart-container-box p-0 overflow-hidden">
+        <div class="p-3 bg-dark text-white d-flex justify-content-between align-items-center">
+          <h6 class="fw-bold mb-0">
+            <i class="fa-solid fa-ranking-star text-warning me-2"></i>Ranking: Maquinarias Más Rentables y Solicitadas
+          </h6>
+          <span class="badge bg-warning text-dark">Top Rendimiento</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light small text-uppercase">
+              <tr>
+                <th style="width: 40px;">#</th>
+                <th>Equipo</th>
+                <th>Tarifa Diaria</th>
+                <th class="text-center">Arriendos</th>
+                <th class="text-center">Días en Faena</th>
+                <th class="text-end">Total Recaudado</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-mas-vendidos-body">
+              <tr>
+                <td colspan="6" class="text-center py-4 text-muted">Cargando ranking de maquinarias...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       4. PESTAÑAS DE CONTROL OPERATIVO (CONTRATOS & INVENTARIO DE FLOTA)
+       ======================================================================== -->
+  <ul class="nav nav-tabs mb-3 border-bottom border-warning border-2" id="panelOperativoTabs" role="tablist">
+    <li class="nav-item">
+      <button class="nav-link active fw-bold text-dark" id="tab-contratos-btn" data-bs-toggle="tab" data-bs-target="#tab-contratos" type="button">
+        <i class="fa-solid fa-file-signature text-warning me-1"></i>Gestión de Contratos y Reposición de Stock
       </button>
     </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link fw-bold text-dark" id="tab-flota-btn" data-bs-toggle="tab" data-bs-target="#tab-flota" type="button" role="tab">
-        <i class="fa-solid fa-warehouse me-2 text-warning"></i>Inventario y Catálogo de Maquinarias
+    <li class="nav-item">
+      <button class="nav-link fw-bold text-dark" id="tab-flota-btn" data-bs-toggle="tab" data-bs-target="#tab-flota" type="button">
+        <i class="fa-solid fa-warehouse text-warning me-1"></i>Inventario y Catálogo de Maquinarias
       </button>
     </li>
   </ul>
 
-  <div class="tab-content" id="panelTabsContent">
-    <!-- PESTAÑA 1: GESTIÓN DE CONTRATOS Y TRANSICIÓN DE ESTADOS -->
+  <div class="tab-content" id="panelOperativoTabsContent">
+    <!-- PESTAÑA CONTRATOS -->
     <div class="tab-pane fade show active" id="tab-contratos" role="tabpanel">
       <div class="card shadow-sm border-0 rounded-3">
         <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
           <span class="fw-bold">
-            <i class="fa-solid fa-file-invoice text-warning me-2"></i>Contratos de Arriendo Registrados
+            <i class="fa-solid fa-list-check text-warning me-2"></i>Contratos de Arriendo Activos e Históricos
           </span>
-          <span class="small text-white-50">Transiciones automáticas de stock en PostgreSQL</span>
+          <span class="small text-white-50">Transición de estados con reposición automática en PostgreSQL</span>
         </div>
         <div class="card-body p-0">
           <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
               <thead class="table-light small text-uppercase">
                 <tr>
-                  <th>N° Contrato</th>
+                  <th>N°</th>
                   <th>Empresa Constructora</th>
-                  <th>Fecha Emisión</th>
-                  <th>Equipos Incluidos</th>
+                  <th>Emisión</th>
+                  <th>Equipos Contratados</th>
                   <th>Monto Total</th>
-                  <th>Estado Actual</th>
-                  <th class="text-center">Cambiar Estado (Transaccional)</th>
+                  <th>Estado</th>
+                  <th class="text-center">Cambiar Estado (Atómico)</th>
                 </tr>
               </thead>
               <tbody id="tabla-contratos-body">
@@ -134,12 +289,12 @@
       </div>
     </div>
 
-    <!-- PESTAÑA 2: CATÁLOGO Y EDICIÓN DE MAQUINARIAS -->
+    <!-- PESTAÑA FLOTA -->
     <div class="tab-pane fade" id="tab-flota" role="tabpanel">
       <div class="card shadow-sm border-0 rounded-3">
         <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
           <span class="fw-bold">
-            <i class="fa-solid fa-truck-pickup text-warning me-2"></i>Inventario de Flota
+            <i class="fa-solid fa-truck-pickup text-warning me-2"></i>Flota Total de Maquinaria
           </span>
           <button class="btn btn-sm btn-industrial" data-bs-toggle="modal" data-bs-target="#modalNuevaMaquinaria">
             <i class="fa-solid fa-plus me-1"></i>Agregar Maquinaria
@@ -169,10 +324,11 @@
       </div>
     </div>
   </div>
+
 </section>
 
 <!-- ========================================================================
-     MODAL CREAR / REGISTRAR NUEVA MAQUINARIA
+     MODAL CREAR NUEVA MAQUINARIA
      ======================================================================== -->
 <div class="modal fade" id="modalNuevaMaquinaria" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -235,12 +391,18 @@
 {% block extra_js %}
 <script>
 /**
- * LÓGICA DEL PANEL EJECUTIVO (ADMINISTRACIÓN Y TRANSACCIONES)
+ * LÓGICA DEL DASHBOARD EJECUTIVO
+ * Maneja gráficos interactivos de producción mensual, cosas más vendidas,
+ * comparaciones mensuales y trimestrales con Chart.js.
  */
+let chartProduccion = null;
+let chartVendidos = null;
+let chartTrimestres = null;
+
+let modalNuevaMaqInstance = null;
+let categoriasDisponibles = [];
 let listaContratos = [];
 let listaMaquinarias = [];
-let categoriasDisponibles = [];
-let modalNuevaMaqInstance = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!Auth.isAuthenticated() || !Auth.isEjecutivo()) {
@@ -252,38 +414,262 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   modalNuevaMaqInstance = new bootstrap.Modal(document.getElementById('modalNuevaMaquinaria'));
-  await cargarTodoElPanel();
+  await cargarDashboardCompleto();
   configurarFormNuevaMaquinaria();
 });
 
-async function cargarTodoElPanel() {
+async function cargarDashboardCompleto() {
   await Promise.all([
-    cargarCategoriasSelect(),
+    cargarEstadisticasDashboard(),
     cargarContratosEjecutivo(),
-    cargarMaquinariasInventario()
+    cargarMaquinariasInventario(),
+    cargarCategoriasSelect()
   ]);
-  actualizarKPIs();
 }
 
-async function cargarCategoriasSelect() {
+// ----------------------------------------------------------------------------
+// 1. CARGA DE ESTADÍSTICAS GERENCIALES (API /api/dashboard/stats/)
+// ----------------------------------------------------------------------------
+async function cargarEstadisticasDashboard() {
   try {
-    const resp = await apiFetch('/categorias/');
-    if (resp.ok) {
-      categoriasDisponibles = await resp.json();
-      const select = document.getElementById('nueva-maq-cat');
-      select.innerHTML = '<option value="">Seleccione una categoría</option>';
-      categoriasDisponibles.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c.id;
-        opt.textContent = c.nombre;
-        select.appendChild(opt);
-      });
+    const resp = await apiFetch('/dashboard/stats/');
+    if (!resp.ok) {
+      console.error("Error al obtener estadísticas del dashboard");
+      return;
     }
+    const data = await resp.json();
+
+    // Actualizar KPIs
+    document.getElementById('kpi-total-ingresos').textContent = formatCLP(data.kpis.total_ingresos);
+    document.getElementById('kpi-arriendos-activos').textContent = data.kpis.arriendos_activos;
+    document.getElementById('kpi-flota-disponible').textContent = data.kpis.total_flota;
+    document.getElementById('kpi-ticket-promedio').textContent = formatCLP(data.kpis.ticket_promedio);
+    document.getElementById('kpi-total-contratos').textContent = data.kpis.total_contratos;
+
+    const ocupacion = data.kpis.tasa_ocupacion || 0;
+    document.getElementById('kpi-ocupacion').textContent = `${ocupacion}%`;
+    document.getElementById('kpi-ocupacion-bar').style.width = `${Math.min(100, ocupacion)}%`;
+
+    // Comparación Mensual
+    const compM = data.comparacion_mensual;
+    document.getElementById('kpi-mes-actual-monto').textContent = formatCLP(compM.ingresos_actual);
+    document.getElementById('kpi-mes-anterior-monto').textContent = formatCLP(compM.ingresos_anterior);
+
+    const varPct = compM.variacion_ingresos_pct;
+    const badgeVar = document.getElementById('kpi-variacion-badge');
+    if (varPct >= 0) {
+      badgeVar.innerHTML = `<span class="badge bg-success-subtle text-success fw-bold"><i class="fa-solid fa-arrow-trend-up me-1"></i>+${varPct}%</span> vs mes anterior (${compM.mes_anterior})`;
+    } else {
+      badgeVar.innerHTML = `<span class="badge bg-danger-subtle text-danger fw-bold"><i class="fa-solid fa-arrow-trend-down me-1"></i>${varPct}%</span> vs mes anterior (${compM.mes_anterior})`;
+    }
+
+    // Renderizar Gráficos
+    renderizarGraficoProduccionMensual(data.produccion_mensual);
+    renderizarGraficoMasVendidos(data.mas_vendidos);
+    renderizarGraficoComparacionTrimestral(data.comparacion_trimestral);
+    renderizarTablaMasVendidos(data.mas_vendidos);
+
   } catch (e) {
-    console.error("Error cargando categorías:", e);
+    console.error("Error al cargar estadísticas:", e);
   }
 }
 
+// ----------------------------------------------------------------------------
+// 2. RENDERIZACIÓN DE GRÁFICOS CON CHART.JS
+// ----------------------------------------------------------------------------
+
+// Gráfico 1: Producción y Recaudación Mensual (Barras + Línea)
+function renderizarGraficoProduccionMensual(mesesData) {
+  const ctx = document.getElementById('chartProduccionMensual').getContext('2d');
+  if (chartProduccion) chartProduccion.destroy();
+
+  const labels = mesesData.map(m => m.mes_corto);
+  const ingresos = mesesData.map(m => m.ingresos);
+  const contratos = mesesData.map(m => m.contratos);
+
+  chartProduccion = new Chart(ctx, {
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Recaudación ($ CLP)',
+          data: ingresos,
+          backgroundColor: 'rgba(245, 158, 11, 0.75)',
+          borderColor: '#f59e0b',
+          borderWidth: 1,
+          borderRadius: 6,
+          yAxisID: 'y'
+        },
+        {
+          type: 'line',
+          label: 'N° de Contratos',
+          data: contratos,
+          borderColor: '#0f172a',
+          backgroundColor: '#0f172a',
+          borderWidth: 3,
+          tension: 0.3,
+          pointRadius: 4,
+          pointBackgroundColor: '#f59e0b',
+          yAxisID: 'y1'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              if (context.dataset.type === 'bar') {
+                return 'Recaudación: ' + formatCLP(context.raw);
+              }
+              return 'Contratos: ' + context.raw;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          type: 'linear',
+          display: true,
+          position: 'left',
+          ticks: {
+            callback: value => '$' + (value / 1000).toLocaleString('es-CL') + 'k'
+          },
+          grid: { color: 'rgba(0,0,0,0.05)' }
+        },
+        y1: {
+          type: 'linear',
+          display: true,
+          position: 'right',
+          grid: { drawOnChartArea: false },
+          ticks: { stepSize: 1 }
+        }
+      }
+    }
+  });
+}
+
+// Gráfico 2: Cosas Más Vendidas / Más Arrendadas (Doughnut)
+function renderizarGraficoMasVendidos(items) {
+  const ctx = document.getElementById('chartMasVendidos').getContext('2d');
+  if (chartVendidos) chartVendidos.destroy();
+
+  const labels = items.map(i => i.nombre);
+  const dataValues = items.map(i => i.total_arriendos);
+
+  const colores = ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#64748b'];
+
+  chartVendidos = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: dataValues,
+        backgroundColor: colores.slice(0, items.length),
+        borderWidth: 2,
+        borderColor: '#ffffff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      cutout: '65%'
+    }
+  });
+}
+
+// Gráfico 3: Comparación Trimestral (Q1 - Q4)
+function renderizarGraficoComparacionTrimestral(trimestres) {
+  const ctx = document.getElementById('chartComparacionTrimestral').getContext('2d');
+  if (chartTrimestres) chartTrimestres.destroy();
+
+  const labels = trimestres.map(t => t.trimestre);
+  const ingresos = trimestres.map(t => t.ingresos);
+
+  chartTrimestres = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Facturación Trimestral ($ CLP)',
+        data: ingresos,
+        backgroundColor: ['#0f172a', '#334155', '#f59e0b', '#10b981'],
+        borderRadius: 8
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: context => 'Recaudación: ' + formatCLP(context.raw)
+          }
+        }
+      },
+      scales: {
+        y: {
+          ticks: {
+            callback: value => '$' + (value / 1000).toLocaleString('es-CL') + 'k'
+          },
+          grid: { color: 'rgba(0,0,0,0.05)' }
+        }
+      }
+    }
+  });
+}
+
+// Tabla de Cosas Más Vendidas (Ranking de Maquinarias)
+function renderizarTablaMasVendidos(items) {
+  const tbody = document.getElementById('tabla-mas-vendidos-body');
+  tbody.innerHTML = '';
+
+  if (items.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No se registran arriendos en el período.</td></tr>`;
+    return;
+  }
+
+  items.forEach((item, index) => {
+    const badgeClass = index === 0 ? 'badge-top-1' : index === 1 ? 'badge-top-2' : index === 2 ? 'badge-top-3' : 'badge-top-n';
+    const row = `
+      <tr>
+        <td>
+          <span class="top-item-badge ${badgeClass}">${index + 1}</span>
+        </td>
+        <td>
+          <div class="d-flex align-items-center gap-2">
+            <img src="${item.imagen_url || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80'}" 
+                 class="rounded object-fit-cover" style="width: 36px; height: 36px;">
+            <div>
+              <div class="fw-bold text-dark">${item.nombre}</div>
+              <small class="text-muted">${item.categoria}</small>
+            </div>
+          </div>
+        </td>
+        <td class="text-dark small">${formatCLP(item.tarifa_diaria)}/día</td>
+        <td class="text-center">
+          <span class="badge bg-warning-subtle text-dark fw-bold px-2 py-1">${item.total_arriendos} arriendos</span>
+        </td>
+        <td class="text-center text-muted small">${item.total_dias} días</td>
+        <td class="text-end fw-bold text-dark">${formatCLP(item.total_facturado)}</td>
+      </tr>
+    `;
+    tbody.insertAdjacentHTML('beforeend', row);
+  });
+}
+
+// ----------------------------------------------------------------------------
+// 3. CONTRATOS Y CONTROL ATÓMICO DE ESTADOS
+// ----------------------------------------------------------------------------
 async function cargarContratosEjecutivo() {
   const tbody = document.getElementById('tabla-contratos-body');
   try {
@@ -302,7 +688,6 @@ async function cargarContratosEjecutivo() {
         const rut = con.usuario_info ? con.usuario_info.rut_empresa : 'N/A';
         const fecha = new Date(con.fecha_creacion).toLocaleDateString('es-CL');
         const badgeClass = `badge-estado-${con.estado}`;
-
         const equiposNombres = (con.detalles || []).map(d => d.nombre_maquinaria).join(', ') || 'Sin detalles';
 
         const row = `
@@ -339,6 +724,29 @@ async function cargarContratosEjecutivo() {
   }
 }
 
+async function cambiarEstadoContrato(contratoId, nuevoEstado) {
+  try {
+    const resp = await apiFetch(`/contratos/${contratoId}/estado/`, {
+      method: 'PATCH',
+      body: JSON.stringify({ nuevo_estado: nuevoEstado })
+    });
+    const data = await resp.json();
+    if (resp.ok) {
+      showToast(data.mensaje || "Estado actualizado con éxito.", "success");
+      await cargarDashboardCompleto();
+    } else {
+      const err = data.error || data.detail || "No fue posible actualizar el estado.";
+      showToast(err, "danger");
+      await cargarContratosEjecutivo();
+    }
+  } catch (e) {
+    showToast("Error al actualizar estado.", "danger");
+  }
+}
+
+// ----------------------------------------------------------------------------
+// 4. INVENTARIO DE FLOTA Y CRUD
+// ----------------------------------------------------------------------------
 async function cargarMaquinariasInventario() {
   const tbody = document.getElementById('tabla-maquinarias-body');
   try {
@@ -365,8 +773,8 @@ async function cargarMaquinariasInventario() {
                 <span class="badge ${m.unidades_disponibles > 0 ? 'bg-success' : 'bg-danger'} px-2 py-1">
                   ${m.unidades_disponibles} un.
                 </span>
-                <button class="btn btn-outline-secondary btn-sm py-0 px-2" onclick="ajustarStock(${m.id}, 1)" title="Sumar 1 unidad">+</button>
-                <button class="btn btn-outline-secondary btn-sm py-0 px-2" onclick="ajustarStock(${m.id}, -1)" title="Restar 1 unidad" ${m.unidades_disponibles <= 0 ? 'disabled' : ''}>-</button>
+                <button class="btn btn-outline-secondary btn-sm py-0 px-2" onclick="ajustarStock(${m.id}, 1)">+</button>
+                <button class="btn btn-outline-secondary btn-sm py-0 px-2" onclick="ajustarStock(${m.id}, -1)" ${m.unidades_disponibles <= 0 ? 'disabled' : ''}>-</button>
               </div>
             </td>
             <td>
@@ -384,45 +792,6 @@ async function cargarMaquinariasInventario() {
   }
 }
 
-function actualizarKPIs() {
-  document.getElementById('kpi-total-contratos').textContent = listaContratos.length;
-  
-  const activos = listaContratos.filter(c => ['PAGADO', 'ENTREGADO'].includes(c.estado)).length;
-  document.getElementById('kpi-arriendos-activos').textContent = activos;
-
-  const totalStock = listaMaquinarias.reduce((acc, m) => acc + (m.unidades_disponibles || 0), 0);
-  document.getElementById('kpi-unidades-flota').textContent = totalStock;
-
-  const recaudacion = listaContratos
-    .filter(c => c.estado !== 'CANCELADO')
-    .reduce((acc, c) => acc + Number(c.monto_total || 0), 0);
-  document.getElementById('kpi-recaudacion').textContent = formatCLP(recaudacion);
-}
-
-// Acción PATCH para cambio de estado con reposición/descuento transaccional
-async function cambiarEstadoContrato(contratoId, nuevoEstado) {
-  try {
-    const resp = await apiFetch(`/contratos/${contratoId}/estado/`, {
-      method: 'PATCH',
-      body: JSON.stringify({ nuevo_estado: nuevoEstado })
-    });
-
-    const data = await resp.json();
-    if (resp.ok) {
-      showToast(data.mensaje || "Estado actualizado con éxito.", "success");
-      await cargarTodoElPanel();
-    } else {
-      const err = data.error || data.detail || "No fue posible actualizar el estado.";
-      showToast(err, "danger");
-      await cargarContratosEjecutivo();
-    }
-  } catch (e) {
-    showToast("Error de conexión al actualizar estado.", "danger");
-    await cargarContratosEjecutivo();
-  }
-}
-
-// Ajuste rápido de stock de maquinaria
 async function ajustarStock(maquinariaId, delta) {
   const maq = listaMaquinarias.find(m => m.id === maquinariaId);
   if (!maq) return;
@@ -436,14 +805,13 @@ async function ajustarStock(maquinariaId, delta) {
     if (resp.ok) {
       showToast(`Stock de '${maq.nombre}' actualizado a ${nuevoStock}.`, "info");
       await cargarMaquinariasInventario();
-      actualizarKPIs();
+      await cargarEstadisticasDashboard();
     }
   } catch (e) {
     showToast("Error al ajustar stock.", "danger");
   }
 }
 
-// Eliminar maquinaria
 async function eliminarMaquinaria(maquinariaId) {
   if (!confirm("¿Deseas eliminar permanentemente esta maquinaria de la flota?")) return;
   try {
@@ -451,7 +819,7 @@ async function eliminarMaquinaria(maquinariaId) {
     if (resp.ok || resp.status === 204) {
       showToast("Maquinaria eliminada de la flota.", "info");
       await cargarMaquinariasInventario();
-      actualizarKPIs();
+      await cargarEstadisticasDashboard();
     } else {
       showToast("No se puede eliminar: tiene contratos históricos asociados.", "warning");
     }
@@ -460,7 +828,25 @@ async function eliminarMaquinaria(maquinariaId) {
   }
 }
 
-// Formulario de creación de nueva maquinaria
+async function cargarCategoriasSelect() {
+  try {
+    const resp = await apiFetch('/categorias/');
+    if (resp.ok) {
+      categoriasDisponibles = await resp.json();
+      const select = document.getElementById('nueva-maq-cat');
+      select.innerHTML = '<option value="">Seleccione una categoría</option>';
+      categoriasDisponibles.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.nombre;
+        select.appendChild(opt);
+      });
+    }
+  } catch (e) {
+    console.error("Error cargando categorías:", e);
+  }
+}
+
 function configurarFormNuevaMaquinaria() {
   document.getElementById('form-nueva-maquinaria').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -484,9 +870,8 @@ function configurarFormNuevaMaquinaria() {
         modalNuevaMaqInstance.hide();
         document.getElementById('form-nueva-maquinaria').reset();
         await cargarMaquinariasInventario();
-        actualizarKPIs();
+        await cargarEstadisticasDashboard();
       } else {
-        const err = await resp.json();
         showToast("Error al registrar maquinaria.", "danger");
       }
     } catch (e) {

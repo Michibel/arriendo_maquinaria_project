@@ -218,55 +218,104 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f"[OK] {len(maquinarias_data)} Maquinarias cargadas en catálogo."))
 
         # ----------------------------------------------------------------------
-        # 4. CREACIÓN DE CONTRATOS HISTÓRICOS DE MUESTRA
+        # 4. CREACIÓN DE CONTRATOS HISTÓRICOS PARA DASHBOARD ANALÍTICO
+        # Distribuidos en Q1, Q2, Q3 y mes actual para graficar producción y comparativas
         # ----------------------------------------------------------------------
-        maq1 = Maquinaria.objects.get(nombre='Retroexcavadora JCB 3CX Eco')
-        maq2 = Maquinaria.objects.get(nombre='Minicargador Bobcat S570')
+        from django.utils import timezone
+        import datetime
 
-        if not ContratoArriendo.objects.filter(usuario=constructora1).exists():
-            hoy = date.today()
-            f_inicio = hoy + timedelta(days=2)
-            f_fin = f_inicio + timedelta(days=5)
-            dias = 5
-            
-            subtotal1 = (maq1.tarifa_diaria * dias) + maq1.garantia_fija
-            subtotal2 = (maq2.tarifa_diaria * dias) + maq2.garantia_fija
-            total = subtotal1 + subtotal2
+        # Eliminar contratos previos para regenerar métricas limpias
+        ContratoArriendo.objects.all().delete()
+
+        # Maquinarias clave
+        cat320 = Maquinaria.objects.get(nombre='Excavadora Hidráulica CAT 320D')
+        jcb = Maquinaria.objects.get(nombre='Retroexcavadora JCB 3CX Eco')
+        bobcat = Maquinaria.objects.get(nombre='Minicargador Bobcat S570')
+        genie = Maquinaria.objects.get(nombre='Plataforma Tijera Genie GS-2646')
+        toyota = Maquinaria.objects.get(nombre='Grúa Horquilla Toyota Tonero 3.0T')
+        dynapac = Maquinaria.objects.get(nombre='Rodillo Compactador Dynapac CA250D')
+        cat140m = Maquinaria.objects.get(nombre='Motoniveladora Caterpillar 140M')
+        pramac = Maquinaria.objects.get(nombre='Generador Diésel Pramac GSW 110 kVA')
+
+        # Definición de contratos con fechas específicas de 2026
+        escenarios_contratos = [
+            # Q1: Enero, Febrero, Marzo
+            {'user': constructora1, 'fecha': datetime.date(2026, 1, 15), 'items': [(cat320, 6), (bobcat, 4)], 'estado': 'COMPLETADO'},
+            {'user': constructora2, 'fecha': datetime.date(2026, 1, 28), 'items': [(jcb, 5)], 'estado': 'COMPLETADO'},
+            {'user': constructora1, 'fecha': datetime.date(2026, 2, 10), 'items': [(cat320, 8), (pramac, 8)], 'estado': 'COMPLETADO'},
+            {'user': constructora2, 'fecha': datetime.date(2026, 2, 22), 'items': [(toyota, 12)], 'estado': 'COMPLETADO'},
+            {'user': constructora1, 'fecha': datetime.date(2026, 3, 5),  'items': [(dynapac, 7), (cat140m, 5)], 'estado': 'COMPLETADO'},
+            {'user': constructora2, 'fecha': datetime.date(2026, 3, 18), 'items': [(cat320, 10), (jcb, 7)], 'estado': 'COMPLETADO'},
+
+            # Q2: Abril, Mayo, Junio
+            {'user': constructora1, 'fecha': datetime.date(2026, 4, 12), 'items': [(genie, 15), (toyota, 8)], 'estado': 'COMPLETADO'},
+            {'user': constructora2, 'fecha': datetime.date(2026, 4, 25), 'items': [(bobcat, 6), (jcb, 4)], 'estado': 'COMPLETADO'},
+            {'user': constructora1, 'fecha': datetime.date(2026, 5, 8),  'items': [(cat320, 12), (dynapac, 9)], 'estado': 'COMPLETADO'},
+            {'user': constructora2, 'fecha': datetime.date(2026, 5, 20), 'items': [(cat140m, 8)], 'estado': 'COMPLETADO'},
+            {'user': constructora1, 'fecha': datetime.date(2026, 6, 14), 'items': [(pramac, 10), (jcb, 6)], 'estado': 'COMPLETADO'},
+            {'user': constructora2, 'fecha': datetime.date(2026, 6, 27), 'items': [(cat320, 14), (bobcat, 7)], 'estado': 'COMPLETADO'},
+
+            # Q3: Julio, Agosto, Septiembre (Mes Actual y Anterior)
+            {'user': constructora1, 'fecha': datetime.date(2026, 7, 10), 'items': [(toyota, 10), (genie, 8)], 'estado': 'COMPLETADO'},
+            {'user': constructora2, 'fecha': datetime.date(2026, 7, 24), 'items': [(jcb, 9), (bobcat, 5)], 'estado': 'COMPLETADO'},
+            {'user': constructora1, 'fecha': datetime.date(2026, 8, 11), 'items': [(cat320, 15), (pramac, 12)], 'estado': 'COMPLETADO'},
+            {'user': constructora2, 'fecha': datetime.date(2026, 8, 25), 'items': [(dynapac, 10), (cat140m, 6)], 'estado': 'COMPLETADO'},
+            # Mes Actual: Septiembre
+            {'user': constructora1, 'fecha': datetime.date(2026, 9, 5),  'items': [(cat320, 18), (jcb, 10)], 'estado': 'PAGADO'},
+            {'user': constructora2, 'fecha': datetime.date(2026, 9, 14), 'items': [(bobcat, 12), (toyota, 8)], 'estado': 'ENTREGADO'},
+            {'user': constructora1, 'fecha': datetime.date(2026, 9, 22), 'items': [(cat320, 10), (dynapac, 8)], 'estado': 'PAGADO'},
+            {'user': constructora2, 'fecha': datetime.date(2026, 9, 28), 'items': [(genie, 7)], 'estado': 'PENDIENTE'},
+        ]
+
+        total_contratos_creados = 0
+        for esc in escenarios_contratos:
+            f_emision = esc['fecha']
+            items_list = esc['items']
+            estado_c = esc['estado']
+
+            # Calcular total
+            monto_total = Decimal('0.00')
+            detalles_a_crear = []
+            for maq, dias in items_list:
+                sub = (maq.tarifa_diaria * dias) + maq.garantia_fija
+                monto_total += sub
+                f_ini = f_emision + datetime.timedelta(days=1)
+                f_fin = f_ini + datetime.timedelta(days=dias)
+                detalles_a_crear.append({
+                    'maquinaria': maq,
+                    'nombre': maq.nombre,
+                    'tarifa': maq.tarifa_diaria,
+                    'garantia': maq.garantia_fija,
+                    'f_ini': f_ini,
+                    'f_fin': f_fin,
+                    'dias': dias,
+                    'subtotal': sub
+                })
 
             contrato = ContratoArriendo.objects.create(
-                usuario=constructora1,
-                estado=ContratoArriendo.ESTADO_PAGADO,
-                monto_total=total
+                usuario=esc['user'],
+                estado=estado_c,
+                monto_total=monto_total
             )
 
-            DetalleContrato.objects.create(
-                contrato=contrato,
-                maquinaria=maq1,
-                nombre_maquinaria=maq1.nombre,
-                tarifa_diaria=maq1.tarifa_diaria,
-                garantia_fija=maq1.garantia_fija,
-                fecha_inicio=f_inicio,
-                fecha_fin=f_fin,
-                dias_uso=dias,
-                subtotal=subtotal1
-            )
-            DetalleContrato.objects.create(
-                contrato=contrato,
-                maquinaria=maq2,
-                nombre_maquinaria=maq2.nombre,
-                tarifa_diaria=maq2.tarifa_diaria,
-                garantia_fija=maq2.garantia_fija,
-                fecha_inicio=f_inicio,
-                fecha_fin=f_fin,
-                dias_uso=dias,
-                subtotal=subtotal2
-            )
-            # Descontar stock correspondiente a este contrato pagado
-            maq1.unidades_disponibles -= 1
-            maq1.save()
-            maq2.unidades_disponibles -= 1
-            maq2.save()
+            # Forzar fecha de creación histórica para las comparativas temporales
+            dt_creacion = timezone.make_aware(datetime.datetime.combine(f_emision, datetime.time(10, 30)))
+            ContratoArriendo.objects.filter(id=contrato.id).update(fecha_creacion=dt_creacion)
 
-            self.stdout.write(self.style.SUCCESS(f"[OK] Contrato de demostración #{contrato.id} creado para '{constructora1.username}'"))
+            for d in detalles_a_crear:
+                DetalleContrato.objects.create(
+                    contrato=contrato,
+                    maquinaria=d['maquinaria'],
+                    nombre_maquinaria=d['nombre'],
+                    tarifa_diaria=d['tarifa'],
+                    garantia_fija=d['garantia'],
+                    fecha_inicio=d['f_ini'],
+                    fecha_fin=d['f_fin'],
+                    dias_uso=d['dias'],
+                    subtotal=d['subtotal']
+                )
 
-        self.stdout.write(self.style.SUCCESS("=== BASE DE DATOS POBLADA EXITOSAMENTE ==="))
+            total_contratos_creados += 1
+
+        self.stdout.write(self.style.SUCCESS(f"[OK] {total_contratos_creados} Contratos analíticos generados para el Dashboard."))
+        self.stdout.write(self.style.SUCCESS("=== BASE DE DATOS POBLADA EXITOSAMENTE CON DASHBOARD EJECUTIVO ==="))

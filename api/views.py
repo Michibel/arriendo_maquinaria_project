@@ -16,9 +16,12 @@ y transaccionalidad atómica (@transaction.atomic) para:
 """
 
 from decimal import Decimal
+from datetime import date, datetime, timedelta
 from django.db import transaction
+from django.db.models import Sum, Count, Avg, F, Q
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework import viewsets, generics, status, permissions
 from rest_framework.decorators import action
 from rest_framework.views import APIView
@@ -396,6 +399,159 @@ class ContratoViewSet(viewsets.ReadOnlyModelViewSet):
         return Response({
             'mensaje': f"Estado del contrato #{contrato.id} actualizado a '{nuevo_estado}' correctamente.",
             'contrato': ContratoArriendoSerializer(contrato).data
+        }, status=status.HTTP_200_OK)
+
+
+# ==============================================================================
+# BLOQUE 4.1: ENDPOINT DEL DASHBOARD EJECUTIVO (ESTADÍSTICAS AVANZADAS)
+# Cosas más vendidas, producción mensual, comparaciones mensuales y trimestrales
+# ==============================================================================
+class DashboardStatsView(APIView):
+    """
+    Endpoint GET /api/dashboard/stats/
+    Exclusivo para el Ejecutivo de Arriendos.
+    Genera métricas consolidadas en tiempo real:
+    - KPIs globales (Total facturado, arriendos activos, ticket promedio, ocupación)
+    - Cosas más vendidas / más arrendadas (Top maquinarias por frecuencia y recaudación)
+    - Producción mensual (Ingresos y contratos mes a mes)
+    - Comparación mensual (Mes actual vs Mes anterior con variación %)
+    - Comparación trimestral (Q1, Q2, Q3, Q4 con análisis comparativo)
+    """
+    permission_classes = [permissions.IsAuthenticated, EsEjecutivoDeArriendos]
+
+    def get(self, request):
+        now = timezone.now()
+        current_year = now.year
+        current_month = now.month
+
+        # Contratos válidos (excluyendo cancelados para facturación real)
+        contratos_validos = ContratoArriendo.objects.exclude(estado=ContratoArriendo.ESTADO_CANCELADO)
+        todos_contratos = ContratoArriendo.objects.all()
+
+        # 1. KPIs Globales
+        total_ingresos = contratos_validos.aggregate(total=Sum('monto_total'))['total'] or Decimal('0.00')
+        total_contratos_count = todos_contratos.count()
+        arriendos_activos = ContratoArriendo.objects.filter(
+            estado__in=[ContratoArriendo.ESTADO_PAGADO, ContratoArriendo.ESTADO_ENTREGADO]
+        ).count()
+        ticket_promedio = (total_ingresos / Decimal(contratos_validos.count())) if contratos_validos.count() > 0 else Decimal('0.00')
+
+        total_flota = Maquinaria.objects.aggregate(total=Sum('unidades_disponibles'))['total'] or 0
+        total_equipos_arrendados = DetalleContrato.objects.filter(
+            contrato__estado__in=[ContratoArriendo.ESTADO_PAGADO, ContratoArriendo.ESTADO_ENTREGADO]
+        ).count()
+        total_capacidad = total_flota + total_equipos_arrendados
+        tasa_ocupacion = round((total_equipos_arrendados / total_capacidad * 100), 1) if total_capacidad > 0 else 0.0
+
+        # 2. Cosas más vendidas / más arrendadas (Top Maquinarias)
+        top_items = (
+            DetalleContrato.objects
+            .exclude(contrato__estado=ContratoArriendo.ESTADO_CANCELADO)
+            .values('maquinaria__id', 'maquinaria__nombre', 'maquinaria__imagen_url', 'maquinaria__categoria__nombre', 'maquinaria__tarifa_diaria')
+            .annotate(
+                total_arriendos=Count('id'),
+                total_dias=Sum('dias_uso'),
+                total_facturado=Sum('subtotal')
+            )
+            .order_by('-total_arriendos', '-total_facturado')[:6]
+        )
+
+        mas_vendidos = [
+            {
+                'id': item['maquinaria__id'],
+                'nombre': item['maquinaria__nombre'],
+                'categoria': item['maquinaria__categoria__nombre'] or 'Maquinaria',
+                'imagen_url': item['maquinaria__imagen_url'] or '',
+                'tarifa_diaria': float(item['maquinaria__tarifa_diaria'] or 0),
+                'total_arriendos': item['total_arriendos'],
+                'total_dias': item['total_dias'] or 0,
+                'total_facturado': float(item['total_facturado'] or 0),
+            }
+            for item in top_items
+        ]
+
+        # 3. Producción Mensual (Mes a Mes del año en curso)
+        nombres_meses = [
+            'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+        ]
+        produccion_mensual = []
+        for m in range(1, 13):
+            qs_mes = contratos_validos.filter(fecha_creacion__year=current_year, fecha_creacion__month=m)
+            ingresos_m = qs_mes.aggregate(tot=Sum('monto_total'))['tot'] or Decimal('0.00')
+            contratos_m = qs_mes.count()
+            produccion_mensual.append({
+                'mes_numero': m,
+                'mes_nombre': nombres_meses[m - 1],
+                'mes_corto': nombres_meses[m - 1][:3],
+                'ingresos': float(ingresos_m),
+                'contratos': contratos_m,
+            })
+
+        # 4. Comparación Mensual (Mes Actual vs Mes Anterior)
+        prev_month = 12 if current_month == 1 else current_month - 1
+        prev_year = current_year - 1 if current_month == 1 else current_year
+
+        qs_actual = contratos_validos.filter(fecha_creacion__year=current_year, fecha_creacion__month=current_month)
+        qs_anterior = contratos_validos.filter(fecha_creacion__year=prev_year, fecha_creacion__month=prev_month)
+
+        ingresos_actual = qs_actual.aggregate(tot=Sum('monto_total'))['tot'] or Decimal('0.00')
+        ingresos_anterior = qs_anterior.aggregate(tot=Sum('monto_total'))['tot'] or Decimal('0.00')
+        contratos_actual = qs_actual.count()
+        contratos_anterior = qs_anterior.count()
+
+        if ingresos_anterior > 0:
+            var_ingresos_pct = round(((ingresos_actual - ingresos_anterior) / ingresos_anterior) * 100, 1)
+        else:
+            var_ingresos_pct = 100.0 if ingresos_actual > 0 else 0.0
+
+        if contratos_anterior > 0:
+            var_contratos_pct = round(((contratos_actual - contratos_anterior) / contratos_anterior) * 100, 1)
+        else:
+            var_contratos_pct = 100.0 if contratos_actual > 0 else 0.0
+
+        comparacion_mensual = {
+            'mes_actual': nombres_meses[current_month - 1],
+            'mes_anterior': nombres_meses[prev_month - 1],
+            'ingresos_actual': float(ingresos_actual),
+            'ingresos_anterior': float(ingresos_anterior),
+            'variacion_ingresos_pct': float(var_ingresos_pct),
+            'contratos_actual': contratos_actual,
+            'contratos_anterior': contratos_anterior,
+            'variacion_contratos_pct': float(var_contratos_pct),
+        }
+
+        # 5. Comparación Trimestral (Q1, Q2, Q3, Q4)
+        trimestres_def = [
+            ('Q1 (Ene-Mar)', [1, 2, 3]),
+            ('Q2 (Abr-Jun)', [4, 5, 6]),
+            ('Q3 (Jul-Sep)', [7, 8, 9]),
+            ('Q4 (Oct-Dic)', [10, 11, 12]),
+        ]
+        comparacion_trimestral = []
+        for nombre_q, meses_q in trimestres_def:
+            qs_q = contratos_validos.filter(fecha_creacion__year=current_year, fecha_creacion__month__in=meses_q)
+            ingresos_q = qs_q.aggregate(tot=Sum('monto_total'))['tot'] or Decimal('0.00')
+            contratos_q = qs_q.count()
+            comparacion_trimestral.append({
+                'trimestre': nombre_q,
+                'ingresos': float(ingresos_q),
+                'contratos': contratos_q,
+            })
+
+        return Response({
+            'kpis': {
+                'total_ingresos': float(total_ingresos),
+                'total_contratos': total_contratos_count,
+                'arriendos_activos': arriendos_activos,
+                'ticket_promedio': float(ticket_promedio),
+                'total_flota': total_flota,
+                'tasa_ocupacion': tasa_ocupacion,
+            },
+            'mas_vendidos': mas_vendidos,
+            'produccion_mensual': produccion_mensual,
+            'comparacion_mensual': comparacion_mensual,
+            'comparacion_trimestral': comparacion_trimestral,
         }, status=status.HTTP_200_OK)
 
 
