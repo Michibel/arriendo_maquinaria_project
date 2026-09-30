@@ -12,7 +12,10 @@ Define el enrutamiento general del sistema:
 """
 
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
+from django.views.generic import RedirectView
+from django.conf import settings
+from django.conf.urls.static import static
 from api import views as web_views
 
 urlpatterns = [
@@ -32,4 +35,14 @@ urlpatterns = [
     path('panel/', web_views.panel_ejecutivo_view, name='panel_ejecutivo_web'),
     path('login/', web_views.login_view, name='login_web'),
     path('auth/login/', web_views.login_view, name='login'),
+
+    # --------------------------------------------------------------------------
+    # CATCH-ALL REPATH: Redirige cualquier link o ruta no reconocida al inicio
+    # --------------------------------------------------------------------------
+    re_path(r'^.*$', RedirectView.as_view(pattern_name='home', permanent=False), name='fallback_home'),
 ]
+
+# Servir archivos estáticos en desarrollo antes del catch-all
+if settings.DEBUG:
+    urlpatterns = static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0]) + urlpatterns
+

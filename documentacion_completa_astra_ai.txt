@@ -59,6 +59,9 @@ Arquitectura Tecnológica:
    - Empresa Constructora (Cliente Registrado): Carro persistente en PostgreSQL, checkout autenticado, historial "Mis Arriendos".
    - Ejecutivo de Arriendos (Administrador): CRUD de catálogo, ajuste de stock, cambio de estados de contrato y acceso al Dashboard Ejecutivo.
 
+6. Enrutamiento y Fallback (re_path Catch-All):
+   - Se configuró en urls.py un re_path(r'^.*$') que captura cualquier enlace o ruta inexistente fuera del sistema y redirige de forma limpia y transparente al inicio ('/').
+
 --------------------------------------------------------------------------------
 3. MODELO DE DATOS POSTGRESQL (api/models.py)
 --------------------------------------------------------------------------------
