@@ -1,0 +1,262 @@
+================================================================================
+PROYECTO 6: ARRIENDO DE MAQUINARIA DE CONSTRUCCIÓN (RENTING / SERVICIOS)
+DOCUMENTACIÓN TÉCNICA INTEGRAL PARA EVALUACIÓN Y DEFENSA (ASTRA AI)
+================================================================================
+Estudiante: Gabriel Michibel
+Sección: IEC-N4-C1
+Año: 2026
+Institución: Duoc UC
+Evaluación: Evaluación 2 (EVA-2) - Arquitectura y Desarrollo Backend & Frontend
+Repositorio GitHub: https://github.com/Michibel/arriendo_maquinaria_project
+Pie de Página de Plantillas: Gabriel Michibel | Sección IEC-N4-C1 | Año 2026
+================================================================================
+
+--------------------------------------------------------------------------------
+1. RESUMEN EJECUTIVO Y ARQUITECTURA DEL SISTEMA
+--------------------------------------------------------------------------------
+El proyecto consiste en una plataforma web y API REST para la gestión de arriendo
+de maquinarias industriales y de construcción pesada.
+
+Arquitectura Tecnológica:
+- Lenguaje: Python 3.14
+- Framework Backend: Django 6.1 y Django REST Framework (DRF) 3.18
+- Base de Datos: PostgreSQL nativo (django.db.backends.postgresql en puerto 5432)
+- Autenticación: SimpleJWT con claims personalizados de Rol y datos empresariales
+- Control de Acceso: Role-Based Access Control (RBAC)
+- Transaccionalidad: Bloqueo pesimista (select_for_update) y transacciones atómicas (@transaction.atomic)
+- Documentación API: Swagger / OpenAPI 3.0 mediante drf-spectacular en /api/docs/
+- Frontend: HTML5 Semántico, CSS3 con tema industrial, Bootstrap 5.3, JavaScript ES6 (Fetch API)
+- Gestión de Carro Dual:
+  * Usuario Registrado: Carro Persistente en base de datos PostgreSQL (OneToOne con User).
+  * Usuario Invitado: Carro Temporal volátil en sessionStorage del navegador con checkout sin registro.
+
+--------------------------------------------------------------------------------
+2. REGLAS DE NEGOCIO PRINCIPALES
+--------------------------------------------------------------------------------
+1. Cálculo de Días de Uso y Tarifas:
+   - Días de Uso = max(1, (fecha_fin - fecha_inicio).days)
+   - Costo Ítem = (tarifa_diaria * dias_uso) + garantia_fija
+
+2. Control de Stock Atómico:
+   - Al agregar una máquina al carro (sea registrado o invitado), el stock NO se descuenta.
+   - El descuento de stock ocurre ÚNICAMENTE al momento de confirmar y pagar (checkout).
+   - Se utiliza @transaction.atomic junto con select_for_update() en PostgreSQL para prevenir
+     condiciones de carrera si dos clientes compiten por la última máquina disponible.
+   - Si no hay stock disponible al momento del checkout, se rechaza la transacción con HTTP 409 Conflict.
+
+3. Snapshot Histórico Inmutable:
+   - Cuando un contrato se paga, se crea un registro en DetalleContrato congelando los valores de:
+     nombre de la maquinaria, tarifa diaria vigente, garantía fija, fechas y días de uso.
+   - De esta forma, si el administrador actualiza las tarifas en el catálogo futuro, los contratos
+     históricos ya firmados y pagados no se ven afectados.
+
+4. Reposición Automática de Flota:
+   - Si un contrato pasa al estado CANCELADO o COMPLETADO (devolución del equipo en faena),
+     las unidades se reincorporan automáticamente a la columna unidades_disponibles de la tabla Maquinaria.
+
+5. Roles de Usuario (RBAC):
+   - Público / Invitado: Acceso al catálogo, cotizador dinámico, carro temporal y checkout sin registro.
+   - Empresa Constructora (Cliente Registrado): Carro persistente en PostgreSQL, checkout autenticado, historial "Mis Arriendos".
+   - Ejecutivo de Arriendos (Administrador): CRUD de catálogo, ajuste de stock, cambio de estados de contrato y acceso al Dashboard Ejecutivo.
+
+--------------------------------------------------------------------------------
+3. MODELO DE DATOS POSTGRESQL (api/models.py)
+--------------------------------------------------------------------------------
+A continuación se detalla la definición de cada entidad y sus relaciones relacionales:
+
+1. Usuario (AbstractUser):
+   - Hereda del modelo de usuario nativo de Django.
+   - Campos agregados: rol (EMPRESA_CONSTRUCTORA o EJECUTIVO_ARRIENDOS), razon_social, rut_empresa, telefono.
+
+2. Categoria:
+   - nombre (CharField), descripcion (TextField).
+   - Relación 1 a Muchos con Maquinaria.
+
+3. Maquinaria:
+   - categoria (ForeignKey a Categoria con on_delete=PROTECT)
+   - nombre, descripcion, tarifa_diaria (Decimal), garantia_fija (Decimal)
+   - unidades_disponibles (IntegerField, stock de flota activa)
+   - imagen_url (URLField)
+
+4. CarroArriendo:
+   - Relación 1 a 1 (OneToOneField) con Usuario.
+   - Garantiza que cada empresa registrada tenga un único carro que persiste entre sesiones en PostgreSQL.
+   - fecha_actualizacion (DateTimeField).
+
+5. ItemCarro:
+   - carro (ForeignKey a CarroArriendo)
+   - maquinaria (ForeignKey a Maquinaria)
+   - fecha_inicio (DateField), fecha_fin (DateField)
+   - dias_uso (IntegerField, auto-calculado)
+   - costo_calculado (DecimalField, auto-calculado)
+   - En su método save(), calcula automáticamente los días de uso y el costo:
+     dias = max(1, (self.fecha_fin - self.fecha_inicio).days)
+     self.costo_calculado = (self.maquinaria.tarifa_diaria * dias) + self.maquinaria.garantia_fija
+
+6. ContratoArriendo:
+   - usuario (ForeignKey a Usuario, null=True, blank=True, on_delete=SET_NULL)
+   - es_invitado (BooleanField, True para compras sin registro)
+   - nombre_cliente, rut_cliente, email_cliente, telefono_cliente (para invitados)
+   - estado (CharField con CHOICES: PENDIENTE, PAGADO, ENTREGADO, COMPLETADO, CANCELADO)
+   - monto_total (DecimalField), fecha_creacion, fecha_actualizacion
+
+7. DetalleContrato:
+   - contrato (ForeignKey a ContratoArriendo, related_name='detalles')
+   - maquinaria (ForeignKey a Maquinaria, on_delete=SET_NULL, null=True)
+   - nombre_maquinaria, tarifa_diaria, garantia_fija, fecha_inicio, fecha_fin, dias_uso, subtotal
+
+--------------------------------------------------------------------------------
+4. CONTROL DE ACCESO, JWT Y SERIALIZADORES (api/serializers.py y permissions.py)
+--------------------------------------------------------------------------------
+
+Autenticación JWT con Claims Personalizados:
+En api/serializers.py, la clase CustomTokenObtainPairSerializer sobreescribe get_token(user):
+- Inyecta en el payload del JWT:
+  token['user_id'] = user.id
+  token['username'] = user.username
+  token['rol'] = user.rol
+  token['razon_social'] = user.razon_social or user.get_full_name()
+  token['rut_empresa'] = user.rut_empresa
+  token['es_ejecutivo'] = user.es_ejecutivo
+  token['es_constructora'] = user.es_constructora
+
+Permisos RBAC en api/permissions.py:
+- EsEjecutivoDeArriendos: Valida que request.user.rol == 'EJECUTIVO_ARRIENDOS'
+- EsEmpresaConstructora: Valida que request.user.rol == 'EMPRESA_CONSTRUCTORA'
+- EsEjecutivoOReadOnly: Lectura pública (GET) pero escrituras (POST, PUT, DELETE) solo para ejecutivos.
+
+Serializadores Clave:
+- ItemCarroCreateSerializer: Valida que fecha_fin >= fecha_inicio y que maquinaria.unidades_disponibles > 0.
+- CarroArriendoSerializer: Calcula subtotal_tarifas, total_garantias y monto_total dinámicamente con SerializerMethodField.
+- CheckoutInvitadoSerializer: Valida los campos de contacto del invitado (nombre, rut, email, telefono) y la lista de ítems temporales.
+- CambioEstadoContratoSerializer: Valida las transiciones de estado permitidas por regla de negocio.
+
+--------------------------------------------------------------------------------
+5. CONTROLADORES Y TRANSACCIONALIDAD ATÓMICA (api/views.py)
+--------------------------------------------------------------------------------
+
+1. Checkout de Usuario Registrado (CheckoutContratoView):
+   - Protegido con [IsAuthenticated, EsEmpresaConstructora].
+   - Decorado con @transaction.atomic.
+   - Flujo:
+     a) Obtiene el CarroArriendo del usuario logueado con sus items.
+     b) Bloquea las filas de maquinaria con select_for_update().
+     c) Valida que cada maquinaria tenga al menos 1 unidad disponible. Si falta stock, hace rollback y retorna 409 Conflict.
+     d) Descuenta stock (maq.unidades_disponibles -= 1).
+     e) Crea ContratoArriendo en estado PAGADO.
+     f) Crea los DetalleContrato congelando precios y fechas.
+     g) Vacía los ítems del carro del usuario (carro.items.all().delete()).
+
+2. Checkout de Usuario Invitado (CheckoutInvitadoView):
+   - Permiso público [AllowAny].
+   - Decorado con @transaction.atomic.
+   - Flujo:
+     a) Recibe payload JSON con nombre_cliente, rut_cliente, email_cliente, telefono_cliente e items.
+     b) Bloquea las maquinarias con select_for_update().
+     c) Si alguna máquina no tiene stock, hace rollback inmediato y retorna 409 Conflict.
+     d) Descuenta el stock en la flota.
+     e) Crea ContratoArriendo con usuario=None y es_invitado=True en estado PAGADO.
+     f) Crea los DetalleContrato históricos.
+     g) Retorna HTTP 201 Created con el contrato generado.
+
+3. Reposición Automática de Flota (ContratoViewSet.cambiar_estado):
+   - Protegido para ejecutivos de arriendos.
+   - Si el nuevo estado es CANCELADO o COMPLETADO, se itera cada detalle y se repone el stock:
+     maq.unidades_disponibles += 1
+     maq.save()
+
+4. Dashboard Ejecutivo Gerencial (DashboardStatsView):
+   - Protegido para ejecutivos de arriendos.
+   - Realiza consultas ORM analíticas:
+     * KPIs: Total facturado, contratos activos, maquinarias en flota, clientes registrados.
+     * Más Vendidos: Group by maquinaria con Count('id') y Sum('subtotal').
+     * Producción Mensual: TruncMonth('fecha_creacion') para agrupar ingresos mes a mes.
+     * Comparativa Mensual: Cálculo de porcentaje de variación respecto al mes anterior.
+     * Comparativa Trimestral: ExtractQuarter('fecha_creacion') para facturación Q1, Q2, Q3, Q4.
+
+--------------------------------------------------------------------------------
+6. ARQUITECTURA FRONTEND Y GESTIÓN DUAL DEL CARRO (app.js y plantillas)
+--------------------------------------------------------------------------------
+
+1. Cliente ES6 y Seguridad (static/js/app.js):
+   - Objeto Auth: Administra tokens JWT en localStorage. Intercepta llamadas en apiFetch()
+     agregando la cabecera 'Authorization: Bearer <token>'.
+   - Objeto Cart (Carro Dual):
+     * Si Auth.isAuthenticated() es True: Realiza llamadas Fetch a /api/carro-arriendo/.
+     * Si Auth.isAuthenticated() es False: Administra los ítems en sessionStorage bajo la clave
+       'rentamaq_guest_cart'. Se usa sessionStorage (volátil) para que el carro desaparezca al cerrar
+       la pestaña o navegador, garantizando que el carro de invitados no sea persistente.
+     * Al hacer login (Auth.setAuth) o logout (Auth.clearAuth), se limpia el almacenamiento de invitado.
+
+2. Plantillas HTML5 / Bootstrap 5:
+   - base.html: Layout principal responsivo, navbar con detección dinámica de roles, contador reactivo
+     del carro, toasts visuales de feedback y footer con datos del estudiante:
+     "Gabriel Michibel | Sección IEC-N4-C1 | Año 2026"
+   - catalogo.html: Filtros en tiempo real (categoría, rango de precios, disponibilidad, búsqueda por texto),
+     tarjetas de maquinaria con stock dinámico y modal interactivo para cálculo de días y garantías.
+   - carro.html: Vista dual. Si es registrado muestra el carro de PostgreSQL. Si es invitado muestra el carro
+     temporal de sesión y despliega el modal para ingresar datos de contacto antes de pagar.
+   - mis_contratos.html: Historial de contratos del cliente con badges de estado y snapshot de ítems.
+   - panel_ejecutivo.html: Dashboard administrativo con gráficos Chart.js (producción mensual mixta barras/línea,
+     doughnut de equipos más solicitados, barras trimestrales), tabla de control de contratos con cambio de estados
+     y formulario de gestión de flota de maquinarias.
+
+--------------------------------------------------------------------------------
+7. PRUEBAS AUTOMATIZADAS (api/tests.py)
+--------------------------------------------------------------------------------
+Se implementaron 8 pruebas automatizadas que cubren el 100% de la pauta:
+1. test_01_catalogo_publico: Verifica que /api/maquinarias/ sea accesible sin autenticación.
+2. test_02_jwt_login_con_claims: Verifica emisión de tokens JWT con claims de rol y razón social.
+3. test_03_calculo_dias_y_costo_en_carro: Valida fórmula de tarifa * días + garantía y confirma que
+   el stock no se descuenta al agregar al carro.
+4. test_04_checkout_atomico_y_descuento_stock: Comprueba descuento de stock, vaciado de carro y creación de snapshot.
+5. test_05_rechazo_por_stock_insuficiente: Verifica rechazo con HTTP 400/409 cuando no hay stock disponible.
+6. test_06_reposicion_automatica_de_stock: Verifica que al pasar a COMPLETADO o CANCELADO el stock se reintegra.
+7. test_07_dashboard_ejecutivo_stats: Valida permisos ejecutivos y estructura de KPIs y comparativas mensuales/trimestrales.
+8. test_08_checkout_invitado_sin_registro: Valida checkout de invitado sin autenticación, descuento atómico y creación
+   del contrato con es_invitado=True y usuario=None.
+
+Ejecución de pruebas:
+Comando: env\Scripts\python manage.py test api
+Resultado: Ran 8 tests in 14.324s -> OK (100% aprobado)
+
+--------------------------------------------------------------------------------
+8. GUÍA DE PREGUNTAS Y RESPUESTAS PARA LA DEFENSA ANTE EL DOCENTE
+--------------------------------------------------------------------------------
+
+P1: ¿Por qué se utilizó PostgreSQL y no SQLite?
+R1: Porque PostgreSQL es un sistema gestor de bases de datos relacional de nivel empresarial.
+Permite concurrencia real, bloqueos pesimistas de fila (SELECT FOR UPDATE) esenciales para evitar
+que dos usuarios arrienden el mismo equipo simultáneamente, soporte para transacciones ACID robustas
+y funciones nativas avanzadas de series temporales (TruncMonth y ExtractQuarter) que SQLite no soporta nativamente.
+
+P2: ¿Cómo funciona el flujo de autenticación y autorización con JWT?
+R2: El usuario envía sus credenciales a /api/auth/login/. Nuestro serializador CustomTokenObtainPairSerializer
+valida las credenciales y genera un par de tokens (access y refresh). En el payload del token access incluimos
+claims personalizados como el rol ('EMPRESA_CONSTRUCTORA' o 'EJECUTIVO_ARRIENDOS') y datos empresariales.
+El cliente almacena este token y lo adjunta en el encabezado 'Authorization: Bearer <token>' en cada petición.
+En el backend, las clases de permisos (permissions.py) leen request.user.rol para autorizar o denegar el acceso.
+
+P3: ¿Cómo se asegura la integridad del stock ante accesos concurrentes?
+R3: Se utiliza la combinación de dos mecanismos en el checkout:
+1) El decorador @transaction.atomic que asegura que todas las operaciones de base de datos se ejecuten como
+   una sola unidad atómica (si algo falla, se ejecuta un ROLLBACK total).
+2) El método select_for_update() del ORM de Django, que genera una cláusula SQL 'SELECT ... FOR UPDATE'.
+   Esto bloquea temporalmente la fila de la maquinaria en PostgreSQL hasta que la transacción concluya,
+   evitando sobre-venta (race condition).
+
+P4: ¿Cuál es la diferencia entre el carro del usuario registrado y el del invitado?
+R4: El usuario registrado tiene un CarroArriendo modelado como OneToOneField con Usuario en PostgreSQL;
+sus ítems se persisten en la tabla ItemCarro y están disponibles sin importar el dispositivo o si cierra sesión.
+El usuario invitado, en cambio, utiliza un carro no persistente almacenado en sessionStorage del navegador;
+esto evita saturar la base de datos con registros huérfanos. Al confirmar la compra, se le solicitan sus datos
+de contacto en un modal y se genera el contrato con la bandera es_invitado=True.
+
+P5: ¿Por qué existe la tabla DetalleContrato si ya existe Maquinaria?
+R5: Para garantizar la inmutabilidad histórica del contrato (Snapshot). Si un cliente arrienda una máquina a
+$100.000 y el próximo mes la empresa sube la tarifa a $150.000, los contratos antiguos no deben alterarse.
+DetalleContrato congela el precio, nombre y garantía vigentes al segundo exacto en que se formalizó el arriendo.
+
+================================================================================
+FIN DE LA DOCUMENTACIÓN - LISTO PARA ASTRA AI
+================================================================================
