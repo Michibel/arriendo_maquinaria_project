@@ -565,7 +565,7 @@ urlpatterns = [
         ),
         (
             "Pregunta 5: ¿Qué utilidad tiene la tabla DetalleContrato si ya tenemos Maquinaria?",
-            "Respuesta Modelo: 'Representa el concepto de Snapshot Histórico Inmutable. Si un cliente arrienda una grúa a $100.000 y el próximo mes la empresa sube la tarifa a $180.000, los contratos firmados en el pasado no deben alterarse. DetalleContrato congela la tarifa, garantía y nombre vigentes al segundo exacto de la transacción.'"
+            "Respuesta Modelo: 'Representa el concepto de Snapshot Histórico Inmutable. Si un cliente arrienda una grúa a $100.000 CLP y el próximo mes la empresa sube la tarifa a $180.000 CLP, los contratos firmados en el pasado no deben alterarse. DetalleContrato congela la tarifa, garantía y nombre vigentes en Pesos Chilenos (CLP) al segundo exacto de la transacción.'"
         )
     ]
 

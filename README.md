@@ -24,9 +24,12 @@ Plataforma web integral para la gestión y arriendo de maquinarias pesadas y equ
 
 ## 📋 Reglas de Negocio Implementadas
 
-1. **Cálculo de Tarifas y Días de Uso:**
-   $$\text{Días de Uso} = \max(1, (\text{fecha\_fin} - \text{fecha\_inicio}).\text{days})$$
-   $$\text{Costo Ítem} = (\text{tarifa\_diaria} \times \text{dias\_uso}) + \text{garantia\_fija}$$
+1. **Cálculo de Tarifas y Días de Uso (Moneda Nacional Chilena - CLP):**
+   ```text
+   Días de Uso = max(1, fecha_fin - fecha_inicio)
+   Costo Ítem  = (tarifa_diaria × dias_uso) + garantia_fija
+   ```
+   *Todos los valores monetarios de la plataforma se calculan y presentan en Pesos Chilenos (CLP), con formato `$X.XXX CLP` sin decimales.*
 
 2. **Carro Persistente en PostgreSQL (`CarroArriendo` 1:1 con `User`):**
    - El carro no se pierde al cerrar sesión ni al recargar el navegador.
@@ -54,7 +57,7 @@ Plataforma web integral para la gestión y arriendo de maquinarias pesadas y equ
 
 7. **Soporte de Carro Temporal y Checkout para Usuario Invitado (Sin Registro):**
    - Los usuarios no registrados pueden explorar el catálogo y agregar maquinarias al carro de arriendo temporal sin necesidad de iniciar sesión previa.
-   - El carro de invitado se mantiene de forma temporal en el navegador (`localStorage`), sin generar registros huérfanos en la base de datos PostgreSQL.
+   - El carro de invitado se mantiene de forma estrictamente temporal en la sesión del navegador (`sessionStorage`), sin generar registros huérfanos en la base de datos PostgreSQL y destruyéndose al cerrar la ventana.
    - Al finalizar la compra (`POST /api/contratos/checkout-invitado/`), un modal interactivo captura los datos de contacto y facturación: Nombre completo, RUT, Email y Teléfono.
    - La operación se ejecuta bajo `@transaction.atomic` garantizando el descuento atómico de stock en flota, la creación del `ContratoArriendo` (con `es_invitado=True`) y el snapshot inmutable en `DetalleContrato`.
 

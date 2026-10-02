@@ -186,7 +186,7 @@ function showToast(mensaje, tipo = 'success') {
 // ============================================================================
 function formatCLP(valor) {
   const numero = Number(valor) || 0;
-  return '$' + Math.round(numero).toLocaleString('es-CL');
+  return '$' + Math.round(numero).toLocaleString('es-CL') + ' CLP';
 }
 
 function formatDate(fechaStr) {

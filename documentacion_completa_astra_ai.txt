@@ -257,8 +257,8 @@ de contacto en un modal y se genera el contrato con la bandera es_invitado=True.
 
 P5: ¿Por qué existe la tabla DetalleContrato si ya existe Maquinaria?
 R5: Para garantizar la inmutabilidad histórica del contrato (Snapshot). Si un cliente arrienda una máquina a
-$100.000 y el próximo mes la empresa sube la tarifa a $150.000, los contratos antiguos no deben alterarse.
-DetalleContrato congela el precio, nombre y garantía vigentes al segundo exacto en que se formalizó el arriendo.
+$100.000 CLP y el próximo mes la empresa sube la tarifa a $150.000 CLP, los contratos antiguos no deben alterarse.
+DetalleContrato congela el precio, nombre y garantía vigentes en Pesos Chilenos (CLP) al segundo exacto en que se formalizó el arriendo.
 
 ================================================================================
 FIN DE LA DOCUMENTACIÓN - LISTO PARA ASTRA AI

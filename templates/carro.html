@@ -87,16 +87,16 @@
         <div class="card-body p-4">
           <div class="d-flex justify-content-between mb-2">
             <span class="text-muted">Subtotal Tarifas Diarias:</span>
-            <strong id="resumen-tarifas" class="text-dark">$0</strong>
+            <strong id="resumen-tarifas" class="text-dark">$0 CLP</strong>
           </div>
           <div class="d-flex justify-content-between mb-2">
             <span class="text-muted">Total Garantías Fijas:</span>
-            <strong id="resumen-garantias" class="text-dark">$0</strong>
+            <strong id="resumen-garantias" class="text-dark">$0 CLP</strong>
           </div>
           <hr class="my-3">
           <div class="d-flex justify-content-between align-items-center mb-4">
             <span class="fs-5 fw-bold text-dark">Total Contrato:</span>
-            <span id="resumen-total" class="fs-3 fw-bold text-warning">$0</span>
+            <span id="resumen-total" class="fs-3 fw-bold text-warning">$0 CLP</span>
           </div>
 
           <!-- Advertencia de Regla de Negocio Crítica -->
@@ -320,9 +320,9 @@ function renderizarCarro(carro) {
     emptyMsg.classList.remove('d-none');
     btnCheckout.classList.add('disabled');
     btnVaciar.classList.add('d-none');
-    resumenTarifas.textContent = '$0';
-    resumenGarantias.textContent = '$0';
-    resumenTotal.textContent = '$0';
+    resumenTarifas.textContent = '$0 CLP';
+    resumenGarantias.textContent = '$0 CLP';
+    resumenTotal.textContent = '$0 CLP';
     return;
   }
 
