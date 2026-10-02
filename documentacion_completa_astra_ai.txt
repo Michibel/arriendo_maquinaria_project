@@ -1,11 +1,11 @@
-================================================================================
+﻿================================================================================
 PROYECTO 6: ARRIENDO DE MAQUINARIA DE CONSTRUCCIÓN (RENTING / SERVICIOS)
 DOCUMENTACIÓN TÉCNICA INTEGRAL PARA EVALUACIÓN Y DEFENSA (ASTRA AI)
 ================================================================================
 Estudiante: Gabriel Michibel
 Sección: IEC-N4-C1
 Año: 2026
-Institución: Duoc UC
+Institución: Inacap Temuco - Ingenieria en Ciberseguridad
 Evaluación: Evaluación 2 (EVA-2) - Arquitectura y Desarrollo Backend & Frontend
 Repositorio GitHub: https://github.com/Michibel/arriendo_maquinaria_project
 Pie de Página de Plantillas: Gabriel Michibel | Sección IEC-N4-C1 | Año 2026

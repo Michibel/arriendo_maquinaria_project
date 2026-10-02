@@ -113,7 +113,64 @@
       </div>
     </div>
   </div>
+
+  <!-- ============================================================================== -->
+  <!-- SECCIÓN DE SUGERENCIAS DE ARRIENDOS                                            -->
+  <!-- ============================================================================== -->
+  <div id="seccion-sugerencias" class="mt-5 d-none">
+    <hr class="mb-4">
+    <div class="d-flex align-items-center mb-3 gap-2">
+      <i class="fa-solid fa-lightbulb text-warning fs-4"></i>
+      <h4 class="fw-bold mb-0 text-dark">También te podría interesar</h4>
+    </div>
+    <p class="text-muted small mb-4">Equipos disponibles que podrían complementar tu arriendo actual.</p>
+    <div id="sugerencias-grid" class="row g-3">
+      <!-- Renderizado por JS -->
+    </div>
+  </div>
 </section>
+
+<!-- ============================================================================== -->
+<!-- MODAL: EDITAR FECHAS DE UN ÍTEM DEL CARRO                                      -->
+<!-- ============================================================================== -->
+<div class="modal fade" id="modalEditarFechas" tabindex="-1" aria-labelledby="modalEditarFechasLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-dark text-white border-bottom border-warning border-3">
+        <h5 class="modal-title fw-bold" id="modalEditarFechasLabel">
+          <i class="fa-solid fa-calendar-pen text-warning me-2"></i>Editar Período de Arriendo
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p class="text-muted small mb-3" id="editar-maquinaria-nombre"></p>
+
+        <input type="hidden" id="editar-item-id">
+        <input type="hidden" id="editar-maquinaria-id">
+
+        <div class="mb-3">
+          <label for="editar-fecha-inicio" class="form-label fw-bold">Fecha de Inicio <span class="text-danger">*</span></label>
+          <input type="date" class="form-control" id="editar-fecha-inicio" required>
+        </div>
+        <div class="mb-3">
+          <label for="editar-fecha-fin" class="form-label fw-bold">Fecha de Término <span class="text-danger">*</span></label>
+          <input type="date" class="form-control" id="editar-fecha-fin" required>
+        </div>
+
+        <div class="alert alert-light border small py-2">
+          <i class="fa-solid fa-calculator text-warning me-1"></i>
+          El costo se recalcula automáticamente al guardar: <code>días × tarifa diaria + garantía</code>
+        </div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" id="btn-guardar-fechas" class="btn btn-industrial fw-bold px-4">
+          <i class="fa-solid fa-floppy-disk me-1"></i>Guardar Cambios
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ============================================================================== -->
 <!-- MODAL: CHECKOUT PARA USUARIO INVITADO (SIN REGISTRO PREVIO)                   -->
@@ -213,10 +270,15 @@
  * ==============================================================================
  * Permite a usuarios registrados operar con su Carro Persistente en BD y a
  * usuarios invitados cotizar sin registrarse, solicitando sus datos en el Checkout.
+ *
+ * FEATURES:
+ *   - Edición inline de fechas (modal) para cada ítem, con recálculo automático
+ *   - Sugerencias de arriendos relacionados basadas en disponibilidad
  */
 let carroActual = null;
 let modalCheckoutInvitadoBs = null;
-let modalExitoInvitadoBs = null;
+let modalExitoInvitadoBs    = null;
+let modalEditarFechasBs     = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Inicializar modales de Bootstrap
@@ -226,6 +288,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const modalExitoEl = document.getElementById('modalExitoInvitado');
   if (modalExitoEl) modalExitoInvitadoBs = new bootstrap.Modal(modalExitoEl);
 
+  const modalEditarEl = document.getElementById('modalEditarFechas');
+  if (modalEditarEl) modalEditarFechasBs = new bootstrap.Modal(modalEditarEl);
+
   // Configurar interfaz según si es usuario autenticado o invitado
   actualizarEncabezadoModo();
 
@@ -234,22 +299,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Configurar manejadores de eventos
   configurarEventosCarro();
+  configurarGuardarFechas();
 });
 
 // Actualiza encabezados y alertas contextuales
 function actualizarEncabezadoModo() {
-  const titulo = document.getElementById('carro-titulo-principal');
-  const subtitulo = document.getElementById('carro-subtitulo-info');
-  const bannerInvitado = document.getElementById('banner-invitado');
+  const titulo       = document.getElementById('carro-titulo-principal');
+  const subtitulo    = document.getElementById('carro-subtitulo-info');
+  const bannerInv    = document.getElementById('banner-invitado');
 
   if (Auth.isAuthenticated()) {
     titulo.innerHTML = `<i class="fa-solid fa-database text-warning me-2"></i>Carro de Arriendo Persistente`;
     subtitulo.textContent = "Tus equipos y fechas seleccionadas se conservan automáticamente en la base de datos PostgreSQL.";
-    if (bannerInvitado) bannerInvitado.classList.add('d-none');
+    if (bannerInv) bannerInv.classList.add('d-none');
   } else {
     titulo.innerHTML = `<i class="fa-solid fa-cart-shopping text-warning me-2"></i>Carro de Arriendo Temporal (Invitado)`;
     subtitulo.textContent = "Estás cotizando como usuario invitado. Al presionar Confirmar y Pagar, sólo ingresa tus datos de contacto.";
-    if (bannerInvitado) bannerInvitado.classList.remove('d-none');
+    if (bannerInv) bannerInv.classList.remove('d-none');
   }
 }
 
@@ -271,45 +337,46 @@ async function cargarCarro() {
   } else {
     // MODO INVITADO: Leer carro temporal volátil de sesión (sessionStorage)
     const itemsInvitado = Cart.getGuestCart();
-    
-    // Calcular subtotales locales
+
     let subtotalTarifas = 0;
-    let totalGarantias = 0;
-    let montoTotal = 0;
+    let totalGarantias  = 0;
+    let montoTotal      = 0;
 
     itemsInvitado.forEach(it => {
-      const maq = it.maquinaria || {};
-      const tarifa = Number(maq.tarifa_diaria || 0);
+      const maq     = it.maquinaria || {};
+      const tarifa  = Number(maq.tarifa_diaria || 0);
       const garantia = Number(maq.garantia_fija || 0);
-      const sub = tarifa * (it.dias_uso || 1);
+      const sub     = tarifa * (it.dias_uso || 1);
       subtotalTarifas += sub;
-      totalGarantias += garantia;
-      montoTotal += (it.costo_calculado || (sub + garantia));
+      totalGarantias  += garantia;
+      montoTotal      += (it.costo_calculado || (sub + garantia));
     });
 
     carroActual = {
-      es_invitado: true,
-      items: itemsInvitado,
+      es_invitado:      true,
+      items:            itemsInvitado,
       subtotal_tarifas: subtotalTarifas,
-      total_garantias: totalGarantias,
-      monto_total: montoTotal
+      total_garantias:  totalGarantias,
+      monto_total:      montoTotal
     };
 
     renderizarCarro(carroActual);
   }
+
+  // Cargar sugerencias después de renderizar el carro
+  await cargarSugerencias();
 }
 
 // Renderiza la lista de ítems y las cifras del resumen
 function renderizarCarro(carro) {
-  const container = document.getElementById('carro-items-list');
-  const emptyMsg = document.getElementById('carro-vacio-msg');
-  const badgeTotal = document.getElementById('carro-total-badge');
-  const btnCheckout = document.getElementById('btn-checkout');
-  const btnVaciar = document.getElementById('btn-vaciar-carro');
-
-  const resumenTarifas = document.getElementById('resumen-tarifas');
+  const container      = document.getElementById('carro-items-list');
+  const emptyMsg       = document.getElementById('carro-vacio-msg');
+  const badgeTotal     = document.getElementById('carro-total-badge');
+  const btnCheckout    = document.getElementById('btn-checkout');
+  const btnVaciar      = document.getElementById('btn-vaciar-carro');
+  const resumenTarifas  = document.getElementById('resumen-tarifas');
   const resumenGarantias = document.getElementById('resumen-garantias');
-  const resumenTotal = document.getElementById('resumen-total');
+  const resumenTotal   = document.getElementById('resumen-total');
 
   container.innerHTML = '';
 
@@ -320,9 +387,9 @@ function renderizarCarro(carro) {
     emptyMsg.classList.remove('d-none');
     btnCheckout.classList.add('disabled');
     btnVaciar.classList.add('d-none');
-    resumenTarifas.textContent = '$0 CLP';
+    resumenTarifas.textContent  = '$0 CLP';
     resumenGarantias.textContent = '$0 CLP';
-    resumenTotal.textContent = '$0 CLP';
+    resumenTotal.textContent    = '$0 CLP';
     return;
   }
 
@@ -330,47 +397,205 @@ function renderizarCarro(carro) {
   btnCheckout.classList.remove('disabled');
   btnVaciar.classList.remove('d-none');
 
-  resumenTarifas.textContent = formatCLP(carro.subtotal_tarifas);
+  resumenTarifas.textContent  = formatCLP(carro.subtotal_tarifas);
   resumenGarantias.textContent = formatCLP(carro.total_garantias);
-  resumenTotal.textContent = formatCLP(carro.monto_total);
+  resumenTotal.textContent    = formatCLP(carro.monto_total);
 
   items.forEach(item => {
-    const maq = item.maquinaria || {};
-    const tarifaDiaria = Number(maq.tarifa_diaria || 0);
-    const subtotalTarifas = tarifaDiaria * item.dias_uso;
+    const maq           = item.maquinaria || {};
+    const tarifaDiaria  = Number(maq.tarifa_diaria || 0);
+    const subtotalItem  = tarifaDiaria * item.dias_uso;
+    const maqId         = item.maquinaria_id || maq.id || '';
 
     const itemHtml = `
-      <div class="p-3 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-3">
-        <div class="d-flex align-items-center gap-3">
-          <img src="${maq.imagen_url || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80'}" 
-               alt="${maq.nombre || 'Maquinaria'}" class="rounded object-fit-cover" style="width: 70px; height: 70px;">
-          <div>
-            <h6 class="fw-bold mb-1 text-dark">${maq.nombre || 'Equipo Industrial'}</h6>
-            <div class="small text-muted mb-1">
-              <i class="fa-solid fa-calendar-days text-warning me-1"></i>
-              ${formatDate(item.fecha_inicio)} al ${formatDate(item.fecha_fin)} 
-              <span class="badge bg-light text-dark border ms-1">${item.dias_uso} ${item.dias_uso === 1 ? 'día' : 'días'}</span>
-            </div>
-            <div class="small text-muted">
-              Tarifa: <strong>${formatCLP(maq.tarifa_diaria || 0)}/día</strong> | 
-              Garantía: <strong>${formatCLP(maq.garantia_fija || 0)}</strong>
-            </div>
-          </div>
-        </div>
+      <div class="p-3 border-bottom" data-item-id="${item.id}">
+        <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
+          <!-- Imagen + info básica -->
+          <div class="d-flex align-items-center gap-3 flex-grow-1">
+            <img src="${maq.imagen_url || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80'}"
+                 alt="${maq.nombre || 'Maquinaria'}" class="rounded object-fit-cover flex-shrink-0" style="width: 70px; height: 70px;">
+            <div class="flex-grow-1 min-w-0">
+              <h6 class="fw-bold mb-1 text-dark text-truncate">${maq.nombre || 'Equipo Industrial'}</h6>
 
-        <div class="d-flex align-items-center gap-4">
-          <div class="text-end">
-            <div class="fs-5 fw-bold text-dark">${formatCLP(item.costo_calculado)}</div>
-            <small class="text-muted d-block">${formatCLP(subtotalTarifas)} + garantía</small>
+              <!-- Fechas editables inline -->
+              <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                <span class="small text-muted">
+                  <i class="fa-solid fa-calendar-days text-warning me-1"></i>
+                  ${formatDate(item.fecha_inicio)} — ${formatDate(item.fecha_fin)}
+                  <span class="badge bg-light text-dark border ms-1">${item.dias_uso} ${item.dias_uso === 1 ? 'día' : 'días'}</span>
+                </span>
+                <button class="btn btn-outline-warning btn-sm py-0 px-2"
+                        onclick="abrirModalEditar(${item.id}, '${maqId}', '${maq.nombre || ''}', '${item.fecha_inicio}', '${item.fecha_fin}')"
+                        title="Editar período de arriendo">
+                  <i class="fa-solid fa-pencil me-1"></i>Editar fechas
+                </button>
+              </div>
+
+              <div class="small text-muted">
+                Tarifa: <strong>${formatCLP(maq.tarifa_diaria || 0)}/día</strong> |
+                Garantía: <strong>${formatCLP(maq.garantia_fija || 0)}</strong>
+              </div>
+            </div>
           </div>
-          <button class="btn btn-outline-danger btn-sm" onclick="eliminarItemCarro(${item.id})" title="Quitar equipo">
-            <i class="fa-solid fa-trash-can"></i>
-          </button>
+
+          <!-- Costo + botón eliminar -->
+          <div class="d-flex align-items-center gap-3 flex-shrink-0">
+            <div class="text-end">
+              <div class="fs-5 fw-bold text-dark">${formatCLP(item.costo_calculado)}</div>
+              <small class="text-muted d-block">${formatCLP(subtotalItem)} + garantía</small>
+            </div>
+            <button class="btn btn-outline-danger btn-sm" onclick="eliminarItemCarro(${item.id})" title="Quitar equipo">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
         </div>
       </div>
     `;
     container.insertAdjacentHTML('beforeend', itemHtml);
   });
+}
+
+// ============================================================
+// EDICIÓN DE FECHAS: Abre el modal precargado con datos actuales
+// ============================================================
+function abrirModalEditar(itemId, maquinariaId, nombreMaquinaria, fechaInicio, fechaFin) {
+  document.getElementById('editar-item-id').value       = itemId;
+  document.getElementById('editar-maquinaria-id').value = maquinariaId;
+  document.getElementById('editar-maquinaria-nombre').textContent =
+    `Equipo: ${nombreMaquinaria || 'Sin nombre'}`;
+  document.getElementById('editar-fecha-inicio').value = fechaInicio || '';
+  document.getElementById('editar-fecha-fin').value    = fechaFin    || '';
+
+  if (modalEditarFechasBs) modalEditarFechasBs.show();
+}
+
+// Configura el botón "Guardar Cambios" del modal de edición de fechas
+function configurarGuardarFechas() {
+  document.getElementById('btn-guardar-fechas').addEventListener('click', async () => {
+    const itemId      = document.getElementById('editar-item-id').value;
+    const maquinariaId = document.getElementById('editar-maquinaria-id').value;
+    const fechaInicio = document.getElementById('editar-fecha-inicio').value;
+    const fechaFin    = document.getElementById('editar-fecha-fin').value;
+
+    if (!fechaInicio || !fechaFin) {
+      showToast("Debes seleccionar ambas fechas.", "warning");
+      return;
+    }
+    if (fechaFin <= fechaInicio) {
+      showToast("La fecha de término debe ser posterior a la fecha de inicio.", "warning");
+      return;
+    }
+
+    const btnGuardar = document.getElementById('btn-guardar-fechas');
+    btnGuardar.disabled = true;
+    btnGuardar.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Guardando...`;
+
+    try {
+      if (Auth.isAuthenticated()) {
+        // MODO AUTENTICADO: reusar el endpoint POST que detecta ítem existente y actualiza
+        // Necesitamos el objeto maquinaria para Cart.addItem; lo obtenemos del carroActual
+        const itemActual = (carroActual.items || []).find(it => String(it.id) === String(itemId));
+        const maqObj     = itemActual ? itemActual.maquinaria : null;
+
+        const ok = await Cart.addItem(maquinariaId, fechaInicio, fechaFin, maqObj);
+        if (ok) {
+          showToast("Período de arriendo actualizado correctamente.", "success");
+          if (modalEditarFechasBs) modalEditarFechasBs.hide();
+          await cargarCarro();
+        } else {
+          showToast("No se pudo actualizar el período. Intenta nuevamente.", "danger");
+        }
+      } else {
+        // MODO INVITADO: actualizar directamente en sessionStorage
+        const guestCart = Cart.getGuestCart();
+        const idx = guestCart.findIndex(it => String(it.id) === String(itemId));
+        if (idx !== -1) {
+          const maq      = guestCart[idx].maquinaria || {};
+          const inicio   = new Date(fechaInicio);
+          const fin      = new Date(fechaFin);
+          const dias     = Math.max(1, Math.ceil((fin - inicio) / 86400000));
+          const tarifa   = Number(maq.tarifa_diaria || 0);
+          const garantia = Number(maq.garantia_fija || 0);
+
+          guestCart[idx].fecha_inicio      = fechaInicio;
+          guestCart[idx].fecha_fin         = fechaFin;
+          guestCart[idx].dias_uso          = dias;
+          guestCart[idx].costo_calculado   = (tarifa * dias) + garantia;
+
+          sessionStorage.setItem('rentamaq_guest_cart', JSON.stringify(guestCart));
+          showToast("Período de arriendo actualizado.", "success");
+          if (modalEditarFechasBs) modalEditarFechasBs.hide();
+          await cargarCarro();
+        } else {
+          showToast("No se encontró el ítem en el carro.", "danger");
+        }
+      }
+    } catch (e) {
+      console.error("Error al actualizar fechas:", e);
+      showToast("Error al actualizar las fechas.", "danger");
+    } finally {
+      btnGuardar.disabled = false;
+      btnGuardar.innerHTML = `<i class="fa-solid fa-floppy-disk me-1"></i>Guardar Cambios`;
+    }
+  });
+}
+
+// ============================================================
+// SUGERENCIAS DE ARRIENDOS RELACIONADOS
+// ============================================================
+async function cargarSugerencias() {
+  try {
+    // Obtener IDs de maquinarias ya en el carro para excluirlas
+    const idsEnCarro = new Set(
+      (carroActual && carroActual.items || []).map(it => {
+        const maq = it.maquinaria || {};
+        return String(it.maquinaria_id || maq.id || '');
+      })
+    );
+
+    const resp = await fetch('/api/maquinarias/?disponible=true');
+    if (!resp.ok) return;
+
+    const data = await resp.json();
+    const todas = Array.isArray(data) ? data : (data.results || []);
+
+    // Excluir las que ya están en el carro
+    const sugeridas = todas.filter(m => !idsEnCarro.has(String(m.id))).slice(0, 4);
+
+    if (sugeridas.length === 0) return;
+
+    const seccion = document.getElementById('seccion-sugerencias');
+    const grid    = document.getElementById('sugerencias-grid');
+    seccion.classList.remove('d-none');
+    grid.innerHTML = '';
+
+    sugeridas.forEach(maq => {
+      const imagen = maq.imagen_url ||
+        'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80';
+
+      const card = `
+        <div class="col-sm-6 col-lg-3">
+          <div class="card border-0 shadow-sm h-100 rounded-3 overflow-hidden">
+            <img src="${imagen}" alt="${maq.nombre}" class="card-img-top object-fit-cover" style="height: 140px;">
+            <div class="card-body p-3 d-flex flex-column">
+              <h6 class="fw-bold text-dark mb-1 text-truncate">${maq.nombre}</h6>
+              <span class="badge bg-secondary mb-2 align-self-start">${maq.categoria_nombre || ''}</span>
+              <p class="small text-muted mb-2 flex-grow-1" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                ${maq.descripcion || ''}
+              </p>
+              <div class="fw-bold text-warning mb-3">${formatCLP(maq.tarifa_diaria)}<small class="text-muted fw-normal">/día</small></div>
+              <a href="/catalogo/" class="btn btn-outline-dark btn-sm w-100">
+                <i class="fa-solid fa-eye me-1"></i>Ver en Catálogo
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+      grid.insertAdjacentHTML('beforeend', card);
+    });
+  } catch (e) {
+    console.warn("No se pudieron cargar sugerencias:", e);
+  }
 }
 
 // Configura eventos de botones y modales
@@ -433,7 +658,7 @@ function configurarEventosCarro() {
         return;
       }
 
-      document.getElementById('modal-invitado-cantidad').textContent = 
+      document.getElementById('modal-invitado-cantidad').textContent =
         `${carroActual.items.length} ${carroActual.items.length === 1 ? 'equipo' : 'equipos'}`;
       document.getElementById('modal-invitado-total').textContent = formatCLP(carroActual.monto_total);
 
@@ -453,23 +678,23 @@ function configurarEventosCarro() {
       btnSubmit.disabled = true;
       btnSubmit.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Procesando arriendo...`;
 
-      const nombre = document.getElementById('invitado-nombre').value.trim();
-      const rut = document.getElementById('invitado-rut').value.trim();
-      const email = document.getElementById('invitado-email').value.trim();
+      const nombre   = document.getElementById('invitado-nombre').value.trim();
+      const rut      = document.getElementById('invitado-rut').value.trim();
+      const email    = document.getElementById('invitado-email').value.trim();
       const telefono = document.getElementById('invitado-telefono').value.trim();
 
       const itemsPayload = (carroActual.items || []).map(it => ({
         maquinaria_id: it.maquinaria_id,
-        fecha_inicio: it.fecha_inicio,
-        fecha_fin: it.fecha_fin
+        fecha_inicio:  it.fecha_inicio,
+        fecha_fin:     it.fecha_fin
       }));
 
       const payload = {
-        nombre_cliente: nombre,
-        rut_cliente: rut,
-        email_cliente: email,
+        nombre_cliente:   nombre,
+        rut_cliente:      rut,
+        email_cliente:    email,
         telefono_cliente: telefono,
-        items: itemsPayload
+        items:            itemsPayload
       };
 
       try {
@@ -481,23 +706,19 @@ function configurarEventosCarro() {
         const data = await resp.json();
 
         if (resp.ok) {
-          // Ocultar modal de formulario
           if (modalCheckoutInvitadoBs) modalCheckoutInvitadoBs.hide();
 
-          // Limpiar el carro temporal de sessionStorage
           Cart.clearGuestCart();
 
-          // Mostrar modal de éxito
           const contratoCreado = data.contrato || data;
           document.getElementById('modal-exito-numero').textContent = `#${contratoCreado.id || '001'}`;
-          document.getElementById('modal-exito-detalle').textContent = 
+          document.getElementById('modal-exito-detalle').textContent =
             `Arriendo a nombre de ${nombre} por un monto de ${formatCLP(contratoCreado.monto_total || carroActual.monto_total)}. El stock en flota ha sido descontado atómicamente.`;
 
           if (modalExitoInvitadoBs) {
             modalExitoInvitadoBs.show();
           }
 
-          // Re-renderizar carro vacío
           await cargarCarro();
         } else {
           const errorMsg = data.error || data.detail || (data.items ? JSON.stringify(data.items) : "No fue posible procesar el arriendo.");
@@ -524,4 +745,3 @@ async function eliminarItemCarro(itemId) {
 }
 </script>
 {% endblock %}
-

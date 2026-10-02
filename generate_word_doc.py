@@ -1,4 +1,4 @@
-"""
+﻿"""
 Script para generar el documento Word (.docx) profesional con toda la
 explicación del código del Proyecto 6: Arriendo de Maquinaria de Construcción.
 Autor: Gabriel Michibel | Sección: IEC-N4-C1 | Año: 2026
@@ -120,7 +120,7 @@ def build_document():
     p_pre = doc.add_paragraph()
     p_pre.paragraph_format.space_before = Pt(36)
     p_pre.paragraph_format.space_after = Pt(6)
-    run_pre = p_pre.add_run("DUOC UC • ESCUELA DE INFORMÁTICA Y TELECOMUNICACIONES")
+    run_pre = p_pre.add_run("Inacap Temuco - Ingenieria en Ciberseguridad • ESCUELA DE INFORMÁTICA Y TELECOMUNICACIONES")
     run_pre.font.name = "Arial"
     run_pre.font.size = Pt(11)
     run_pre.font.bold = True
