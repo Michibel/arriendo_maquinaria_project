@@ -3,7 +3,8 @@
 
 **Estudiante:** Gabriel Michibel  
 **Sección:** IEC-N4-C1  
-**Año:** 2026  
+**Año:** 2026 
+**Docente:** Marcelo Patricio Alvarado Aravena 
 **Institución:** Inacap Temuco - Ingeniería en Ciberseguridad  
 
 ---
