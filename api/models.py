@@ -220,7 +220,7 @@ class CarroArriendo(models.Model):
 class ItemCarro(models.Model):
     """
     Ítem individual contenido dentro del CarroArriendo.
-    Calcula automáticamente los días y el costo total en base a las fechas.
+    Calcula automáticamente los días y el costo total en base a las fechas y cantidad.
     """
     carro = models.ForeignKey(
         CarroArriendo,
@@ -240,6 +240,10 @@ class ItemCarro(models.Model):
     fecha_fin = models.DateField(
         verbose_name="Fecha de Término del Arriendo"
     )
+    cantidad = models.PositiveIntegerField(
+        default=1,
+        verbose_name="Cantidad de Unidades a Arrendar"
+    )
     dias_uso = models.PositiveIntegerField(
         verbose_name="Días de Uso Estimados",
         editable=False
@@ -247,7 +251,7 @@ class ItemCarro(models.Model):
     costo_calculado = models.DecimalField(
         max_digits=12,
         decimal_places=2,
-        verbose_name="Costo Calculado (Tarifa + Garantía)",
+        verbose_name="Costo Calculado (Tarifa × Días × Cantidad + Garantías)",
         editable=False
     )
 
@@ -265,19 +269,21 @@ class ItemCarro(models.Model):
         """
         Calcula automáticamente los días de uso y el costo total:
         Días de Uso = max(1, (fecha_fin - fecha_inicio).days)
-        Costo Ítem = (tarifa_diaria * dias_uso) + garantia_fija
+        Costo Ítem = (tarifa_diaria * dias_uso * cantidad) + (garantia_fija * cantidad)
         """
         self.clean()
         delta = (self.fecha_fin - self.fecha_inicio).days
         self.dias_uso = max(1, delta)
-        
-        tarifa_total = self.maquinaria.tarifa_diaria * Decimal(self.dias_uso)
-        self.costo_calculado = tarifa_total + self.maquinaria.garantia_fija
-        
+        cantidad = max(1, self.cantidad or 1)
+
+        tarifa_total = self.maquinaria.tarifa_diaria * Decimal(self.dias_uso) * Decimal(cantidad)
+        self.costo_calculado = tarifa_total + (self.maquinaria.garantia_fija * Decimal(cantidad))
+
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.maquinaria.nombre} ({self.dias_uso} días: ${self.costo_calculado})"
+        return f"{self.maquinaria.nombre} x{self.cantidad} ({self.dias_uso} días: ${self.costo_calculado})"
+
 
 
 # ==============================================================================

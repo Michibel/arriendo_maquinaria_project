@@ -171,15 +171,17 @@ class CarroArriendoView(APIView):
         carro = self.get_carro(request.user)
         serializer = ItemCarroCreateSerializer(data=request.data)
         if serializer.is_valid():
-            maquinaria = serializer.validated_data['maquinaria']
+            maquinaria   = serializer.validated_data['maquinaria']
             fecha_inicio = serializer.validated_data['fecha_inicio']
-            fecha_fin = serializer.validated_data['fecha_fin']
+            fecha_fin    = serializer.validated_data['fecha_fin']
+            cantidad     = serializer.validated_data.get('cantidad', 1)
 
-            # Verifica si el equipo ya está en el carro para actualizar fechas o agregar
+            # Verifica si el equipo ya está en el carro para actualizar fechas/cantidad
             item_existente = ItemCarro.objects.filter(carro=carro, maquinaria=maquinaria).first()
             if item_existente:
                 item_existente.fecha_inicio = fecha_inicio
-                item_existente.fecha_fin = fecha_fin
+                item_existente.fecha_fin    = fecha_fin
+                item_existente.cantidad     = cantidad
                 item_existente.save()
                 item_serializer = ItemCarroSerializer(item_existente)
                 return Response({
@@ -192,7 +194,8 @@ class CarroArriendoView(APIView):
                 carro=carro,
                 maquinaria=maquinaria,
                 fecha_inicio=fecha_inicio,
-                fecha_fin=fecha_fin
+                fecha_fin=fecha_fin,
+                cantidad=cantidad,
             )
             nuevo_item.save()
             item_serializer = ItemCarroSerializer(nuevo_item)
@@ -205,7 +208,9 @@ class CarroArriendoView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+
 class CarroItemEliminarView(APIView):
+
     """
     Endpoint DELETE /api/carro-arriendo/{item_id}/
     Elimina un ítem específico del carro persistente.
@@ -270,10 +275,13 @@ class CheckoutContratoView(APIView):
         for item in items:
             # Bloqueo select_for_update para evitar condiciones de carrera en alta concurrencia
             maq = Maquinaria.objects.select_for_update().get(id=item.maquinaria_id)
-            if maq.unidades_disponibles < 1:
+            if maq.unidades_disponibles < item.cantidad:
                 # Transacción abortada automáticamente
                 return Response({
-                    'error': f"Stock insuficiente para '{maq.nombre}'. No hay unidades disponibles en flota."
+                    'error': (
+                        f"Stock insuficiente para '{maq.nombre}'. "
+                        f"Pediste {item.cantidad} unidades pero solo hay {maq.unidades_disponibles} disponibles."
+                    )
                 }, status=status.HTTP_409_CONFLICT)
 
         # 2. Creación del Contrato de Arriendo en estado PAGADO
@@ -287,9 +295,9 @@ class CheckoutContratoView(APIView):
         # 3. Creación del Snapshot Histórico (DetalleContrato) y Descuento Atómico de Stock
         for item in items:
             maq = Maquinaria.objects.select_for_update().get(id=item.maquinaria_id)
-            
-            # Descuento atómico del stock en flota
-            maq.unidades_disponibles -= 1
+
+            # Descuento atómico del stock en flota (por la cantidad solicitada)
+            maq.unidades_disponibles -= item.cantidad
             maq.save()
 
             # Congelamiento de datos históricos
@@ -304,6 +312,7 @@ class CheckoutContratoView(APIView):
                 dias_uso=item.dias_uso,
                 subtotal=item.costo_calculado
             )
+
 
         # 4. Vaciar el carro persistente del usuario tras el pago exitoso
         carro.items.all().delete()

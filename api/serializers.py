@@ -179,40 +179,45 @@ class ItemCarroSerializer(serializers.ModelSerializer):
         model = ItemCarro
         fields = [
             'id', 'maquinaria', 'fecha_inicio', 'fecha_fin',
-            'dias_uso', 'costo_calculado'
+            'cantidad', 'dias_uso', 'costo_calculado'
         ]
 
 
 class ItemCarroCreateSerializer(serializers.ModelSerializer):
     """
     Serializador de entrada para agregar un ítem al carro persistente.
-    Aplica las validaciones de rango de fechas y stock en flota.
+    Aplica las validaciones de rango de fechas, cantidad y stock en flota.
     """
     maquinaria_id = serializers.PrimaryKeyRelatedField(
         queryset=Maquinaria.objects.all(),
         source='maquinaria',
         write_only=True
     )
+    cantidad = serializers.IntegerField(default=1, min_value=1, max_value=20)
 
     class Meta:
         model = ItemCarro
-        fields = ['maquinaria_id', 'fecha_inicio', 'fecha_fin']
+        fields = ['maquinaria_id', 'fecha_inicio', 'fecha_fin', 'cantidad']
 
     def validate(self, attrs):
         fecha_inicio = attrs.get('fecha_inicio')
         fecha_fin = attrs.get('fecha_fin')
         maquinaria = attrs.get('maquinaria')
+        cantidad = attrs.get('cantidad', 1)
 
         if fecha_inicio and fecha_fin:
             if fecha_fin < fecha_inicio:
                 raise serializers.ValidationError({
                     'fecha_fin': "La fecha de fin debe ser igual o posterior a la fecha de inicio."
                 })
-        
-        # Validar disponibilidad de stock
-        if maquinaria.unidades_disponibles <= 0:
+
+        # Validar que haya suficiente stock para la cantidad pedida
+        if maquinaria.unidades_disponibles < cantidad:
             raise serializers.ValidationError({
-                'maquinaria_id': f"La maquinaria '{maquinaria.nombre}' no tiene unidades disponibles en este momento."
+                'cantidad': (
+                    f"Solo hay {maquinaria.unidades_disponibles} unidades disponibles de "
+                    f"'{maquinaria.nombre}'. No se puede pedir {cantidad}."
+                )
             })
 
         return attrs

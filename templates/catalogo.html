@@ -1,29 +1,34 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Catálogo de Maquinarias | RentaMaq Industrial{% endblock %}
+{% block title %}Catálogo de Maquinarias | RentaMaq Industrial Chile{% endblock %}
 
 {% block content %}
 <!-- ========================================================================
-     HERO BANNER INDUSTRIAL
+     HERO BANNER INDUSTRIAL REALISTA
      ======================================================================== -->
 <section class="hero-industrial text-center">
-  <div class="container py-4">
-    <span class="badge bg-warning text-dark px-3 py-2 fw-bold text-uppercase mb-3">
-      <i class="fa-solid fa-helmet-safety me-1"></i> Flota Pesada de Alto Rendimiento
-    </span>
-    <h1 class="hero-title">
-      Arriendo de Maquinaria para <span>Construcción y Minería</span>
+  <div class="container py-3">
+    <div class="d-inline-flex align-items-center gap-2 bg-dark bg-opacity-75 border border-warning border-opacity-50 px-3 py-1 rounded-pill mb-3">
+      <span class="badge bg-warning text-dark fw-bold">CHILE 2026</span>
+      <span class="text-white small fw-semibold"><i class="fa-solid fa-circle-check text-warning me-1"></i>Flota Certificada CESMEC / SEC con Entrega en Obra</span>
+    </div>
+    
+    <h1 class="hero-title mb-3">
+      Arriendo de Maquinaria Pesada para <span>Construcción y Minería</span>
     </h1>
-    <p class="lead text-light max-w-700 mx-auto mt-3">
-      Equipos certificados, entrega inmediata en faena y tarifas transparentes con cálculo dinámico por días de uso.
+    
+    <p class="lead text-light max-w-700 mx-auto mb-4" style="font-size: 1.15rem; max-width: 780px;">
+      Cotización instantánea en línea, disponibilidad garantizada en faena y contratos con mantenimiento preventivo incluido en todo el país.
     </p>
-    <div class="mt-4 d-flex justify-content-center gap-3">
-      <a href="#catalogo-section" class="btn btn-industrial btn-lg px-4">
-        <i class="fa-solid fa-list-check me-2"></i>Ver Catálogo Disponible
+
+    <!-- Botones de Acción Rápida -->
+    <div class="d-flex justify-content-center gap-3 flex-wrap">
+      <a href="#catalogo-section" class="btn btn-industrial btn-lg px-4 py-2 fw-bold">
+        <i class="fa-solid fa-list-check me-2"></i>Ver Equipos Disponibles
       </a>
-      <a href="/api/docs/" target="_blank" class="btn btn-outline-light btn-lg px-4">
-        <i class="fa-solid fa-book-open me-2"></i>Ver API Swagger
+      <a href="/api/docs/" target="_blank" class="btn btn-outline-light btn-lg px-4 py-2 fw-bold">
+        <i class="fa-solid fa-file-code me-2"></i>Documentación API Swagger
       </a>
     </div>
   </div>
@@ -43,55 +48,122 @@
 </div>
 
 <!-- ========================================================================
+     BARRA DE BENEFICIOS Y CONFIANZA (ESTILO RENDALOMAQ / BIMAQ)
+     ======================================================================== -->
+<div class="container">
+  <div class="trust-bar">
+    <div class="row g-4 align-items-center">
+      <div class="col-lg-3 col-sm-6">
+        <div class="trust-item">
+          <div class="trust-icon">
+            <i class="fa-solid fa-truck-ramp-box"></i>
+          </div>
+          <div class="trust-text">
+            <h6>Entrega y Retiro en Obra</h6>
+            <p>Logística coordinada directo a tu faena en 24 a 48 hrs.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-sm-6">
+        <div class="trust-item">
+          <div class="trust-icon">
+            <i class="fa-solid fa-wrench"></i>
+          </div>
+          <div class="trust-text">
+            <h6>Mantenimiento Incluido</h6>
+            <p>Servicio preventivo e insumos cubiertos durante el arriendo.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-sm-6">
+        <div class="trust-item">
+          <div class="trust-icon">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div class="trust-text">
+            <h6>Seguro Todo Riesgo</h6>
+            <p>Garantía fija y cobertura completa ante eventualidades.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-sm-6">
+        <div class="trust-item">
+          <div class="trust-icon">
+            <i class="fa-solid fa-satellite-dish"></i>
+          </div>
+          <div class="trust-text">
+            <h6>Telemetría GPS 24/7</h6>
+            <p>Monitoreo satelital de horómetros y estado del equipo.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================================================
      SECCIÓN DE FILTROS EN TIEMPO REAL
      ======================================================================== -->
 <section id="catalogo-section" class="container py-5">
-  <div class="card shadow-sm border-0 mb-4 p-3 bg-white rounded-3">
+  <div class="card shadow-sm border-0 mb-4 p-3 bg-white rounded-4">
     <div class="row g-3 align-items-center">
       <!-- Buscador por texto -->
       <div class="col-md-4">
+        <label class="form-label small fw-bold text-muted mb-1">
+          <i class="fa-solid fa-magnifying-glass me-1 text-warning"></i>Buscar por Nombre o Modelo
+        </label>
         <div class="input-group">
           <span class="input-group-text bg-light border-end-0">
             <i class="fa-solid fa-magnifying-glass text-muted"></i>
           </span>
-          <input type="text" id="filter-search" class="form-control border-start-0" placeholder="Buscar excavadora, rodillo, grúa...">
+          <input type="text" id="filter-search" class="form-control border-start-0" placeholder="Ej: Excavadora CAT 320, Bobcat...">
         </div>
       </div>
 
       <!-- Selector de Categoría -->
       <div class="col-md-3">
+        <label class="form-label small fw-bold text-muted mb-1">
+          <i class="fa-solid fa-layer-group me-1 text-warning"></i>Familia / Categoría
+        </label>
         <select id="filter-category" class="form-select">
           <option value="">Todas las Categorías</option>
           <!-- Opciones cargadas dinámicamente -->
         </select>
       </div>
 
-      <!-- Rango de Tarifas -->
+      <!-- Rango de Tarifas Diarias -->
       <div class="col-md-3">
+        <label class="form-label small fw-bold text-muted mb-1">
+          <i class="fa-solid fa-coins me-1 text-warning"></i>Rango de Tarifa Diaria (CLP)
+        </label>
         <select id="filter-price" class="form-select">
-          <option value="">Cualquier Tarifa Diaria (CLP)</option>
+          <option value="">Cualquier Tarifa Diaria</option>
           <option value="0-70000">Hasta $70.000 CLP / día</option>
           <option value="70000-120000">$70.000 a $120.000 CLP / día</option>
-          <option value="120000-999999">Más de $120.000 CLP / día</option>
+          <option value="120000-9999999">Más de $120.000 CLP / día</option>
         </select>
       </div>
 
       <!-- Filtro de Disponibilidad -->
-      <div class="col-md-2">
+      <div class="col-md-2 d-flex flex-column justify-content-end">
+        <label class="form-label small fw-bold text-muted mb-1">Disponibilidad</label>
         <div class="form-check form-switch pt-1">
           <input class="form-check-input" type="checkbox" id="filter-available" checked>
-          <label class="form-check-label fw-bold small" for="filter-available">Solo con Stock</label>
+          <label class="form-check-label fw-bold small text-dark" for="filter-available">Solo con Stock</label>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Contenedor del Catálogo de Maquinarias -->
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3 class="fw-bold mb-0 text-dark">
-      <i class="fa-solid fa-truck-ramp-box text-warning me-2"></i>Maquinarias en Flota
-    </h3>
-    <span id="catalogo-counter" class="text-muted fw-bold">Cargando flota...</span>
+  <!-- Encabezado del Catálogo de Maquinarias -->
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h3 class="fw-bold mb-0 text-dark">
+        <i class="fa-solid fa-truck-ramp-box text-warning me-2"></i>Flota Disponible para Arriendo
+      </h3>
+      <p class="text-muted small mb-0">Precios transparentes en pesos chilenos (CLP) con garantía reembolsable.</p>
+    </div>
+    <span id="catalogo-counter" class="badge bg-dark px-3 py-2 fs-6">Cargando flota...</span>
   </div>
 
   <!-- Grid de Cards de Maquinaria -->
@@ -102,8 +174,8 @@
   <!-- Mensaje de no resultados -->
   <div id="no-results-msg" class="text-center py-5 d-none">
     <i class="fa-solid fa-triangle-exclamation text-warning fa-3x mb-3"></i>
-    <h4 class="fw-bold">No se encontraron maquinarias</h4>
-    <p class="text-muted">Intenta ajustando los filtros de búsqueda o categoría.</p>
+    <h4 class="fw-bold">No se encontraron maquinarias para esta búsqueda</h4>
+    <p class="text-muted">Intenta ajustando los filtros de categoría o ampliando el rango de tarifas.</p>
   </div>
 </section>
 
@@ -112,26 +184,26 @@
      ======================================================================== -->
 <div class="modal fade" id="modalArriendo" tabindex="-1" aria-labelledby="modalArriendoLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg">
+    <div class="modal-content border-0 shadow-lg rounded-4">
       <div class="modal-header bg-dark text-white border-bottom border-warning border-3">
         <h5 class="modal-title fw-bold" id="modalArriendoLabel">
-          <i class="fa-solid fa-calendar-check text-warning me-2"></i>Configurar Período de Arriendo
+          <i class="fa-solid fa-calendar-check text-warning me-2"></i>Cotizar Período de Arriendo
         </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
       </div>
 
       <div class="modal-body p-4">
         <!-- Resumen del Equipo -->
         <div class="d-flex align-items-center gap-3 pb-3 mb-3 border-bottom">
-          <img id="modal-maq-img" src="" alt="Maquinaria" class="rounded object-fit-cover" style="width: 80px; height: 80px;">
+          <img id="modal-maq-img" src="" alt="Maquinaria" class="rounded-3 object-fit-cover shadow-sm" style="width: 85px; height: 85px;">
           <div>
-            <h6 id="modal-maq-nombre" class="fw-bold mb-1 text-dark">Nombre del Equipo</h6>
+            <h6 id="modal-maq-nombre" class="fw-bold mb-1 text-dark fs-5">Nombre del Equipo</h6>
             <span id="modal-maq-cat" class="badge bg-secondary mb-1">Categoría</span>
             <div class="small text-muted">
-              Tarifa: <strong id="modal-maq-tarifa" class="text-dark">$0</strong> / día
+              Tarifa Diaria: <strong id="modal-maq-tarifa" class="text-dark">$0</strong>
             </div>
             <div class="small text-muted">
-              Garantía Fija: <strong id="modal-maq-garantia" class="text-dark">$0</strong>
+              Garantía Fija Reembolsable: <strong id="modal-maq-garantia" class="text-dark">$0</strong>
             </div>
           </div>
         </div>
@@ -158,7 +230,7 @@
           <!-- Cuadro de Cálculo Dinámico en Tiempo Real -->
           <div class="calculo-preview-box mb-4">
             <div class="d-flex justify-content-between mb-1 small text-muted">
-              <span>Días de Arriendo Calculados:</span>
+              <span>Período Estimado:</span>
               <strong id="calc-dias" class="text-dark">1 día</strong>
             </div>
             <div class="d-flex justify-content-between mb-1 small text-muted">
@@ -171,12 +243,15 @@
             </div>
             <hr class="my-2">
             <div class="d-flex justify-content-between align-items-center">
-              <span class="fw-bold">Total Estimado del Ítem:</span>
+              <div>
+                <span class="fw-bold d-block text-dark">Total Estimado:</span>
+                <small class="text-muted" style="font-size: 0.72rem;">Tarifas + Garantía de Respaldo</small>
+              </div>
               <span id="calc-total" class="total-highlight text-warning">$0 CLP</span>
             </div>
           </div>
 
-          <button type="submit" class="btn btn-industrial w-100 py-2 fw-bold">
+          <button type="submit" class="btn btn-industrial w-100 py-3 fw-bold fs-5 shadow-sm">
             <i class="fa-solid fa-cart-plus me-2"></i>Agregar al Carro de Arriendo
           </button>
         </form>
@@ -189,7 +264,7 @@
 {% block extra_js %}
 <script>
 /**
- * LÓGICA ESPECÍFICA DEL CATÁLOGO DE MAQUINARIAS
+ * LÓGICA DEL CATÁLOGO DE MAQUINARIAS
  * Maneja filtros en vivo, renderizado de cards y modal de cálculo dinámico.
  */
 let todasLasMaquinarias = [];
@@ -202,7 +277,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const banner = document.getElementById('banner-admin-conectado');
     if (banner) banner.classList.remove('d-none');
   }
-  modalArriendoInstance = new bootstrap.Modal(document.getElementById('modalArriendo'));
+  const modalEl = document.getElementById('modalArriendo');
+  if (modalEl) modalArriendoInstance = new bootstrap.Modal(modalEl);
   inicializarFechasModal();
   await cargarCategorias();
   await cargarMaquinarias();
@@ -281,7 +357,7 @@ function aplicarFiltros() {
   const filtradas = todasLasMaquinarias.filter(maq => {
     if (busqueda) {
       const matchNombre = maq.nombre.toLowerCase().includes(busqueda);
-      const matchDesc = maq.descripcion.toLowerCase().includes(busqueda);
+      const matchDesc = (maq.descripcion || '').toLowerCase().includes(busqueda);
       if (!matchNombre && !matchDesc) return false;
     }
 
@@ -312,7 +388,7 @@ function renderizarGrid(maquinarias) {
   const noResults = document.getElementById('no-results-msg');
 
   grid.innerHTML = '';
-  counter.textContent = `${maquinarias.length} equipos encontrados`;
+  counter.textContent = `${maquinarias.length} equipos disponibles`;
 
   if (maquinarias.length === 0) {
     noResults.classList.remove('d-none');
@@ -323,15 +399,15 @@ function renderizarGrid(maquinarias) {
   maquinarias.forEach(maq => {
     const hayStock = maq.unidades_disponibles > 0;
     const badgeStock = hayStock 
-      ? `<span class="badge badge-stock bg-success text-white"><i class="fa-solid fa-circle-check me-1"></i>Stock: ${maq.unidades_disponibles}</span>`
-      : `<span class="badge badge-stock bg-danger text-white"><i class="fa-solid fa-ban me-1"></i>Agotado</span>`;
+      ? `<span class="badge badge-stock bg-success text-white"><i class="fa-solid fa-circle-check me-1"></i>Disponible (${maq.unidades_disponibles})</span>`
+      : `<span class="badge badge-stock bg-danger text-white"><i class="fa-solid fa-ban me-1"></i>Sin Stock en Parque</span>`;
 
     const btnArrendar = hayStock
-      ? `<button class="btn btn-industrial w-100 fw-bold" onclick="abrirModalArriendo(${maq.id})">
-           <i class="fa-solid fa-calendar-days me-1"></i>Arrendar Equipo
+      ? `<button class="btn btn-industrial w-100 fw-bold py-2" onclick="abrirModalArriendo(${maq.id})">
+           <i class="fa-solid fa-calendar-days me-1"></i>Cotizar y Arrendar
          </button>`
-      : `<button class="btn btn-secondary w-100 fw-bold disabled">
-           <i class="fa-solid fa-lock me-1"></i>Sin Disponibilidad
+      : `<button class="btn btn-secondary w-100 fw-bold py-2 disabled">
+           <i class="fa-solid fa-lock me-1"></i>En Faena (Agotado)
          </button>`;
 
     const imgUrl = maq.imagen_url || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80';
@@ -346,14 +422,25 @@ function renderizarGrid(maquinarias) {
           </div>
           <div class="card-body p-3 d-flex flex-column">
             <h5 class="fw-bold mb-1 text-dark">${maq.nombre}</h5>
+            
+            <div class="mb-2">
+              <span class="badge-specs"><i class="fa-solid fa-gas-pump text-warning"></i> Diésel</span>
+              <span class="badge-specs"><i class="fa-solid fa-satellite text-warning"></i> GPS 24/7</span>
+              <span class="badge-specs"><i class="fa-solid fa-shield-check text-warning"></i> SEC</span>
+            </div>
+
             <p class="text-muted small mb-3 flex-grow-1" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
               ${maq.descripcion}
             </p>
             
-            <div class="border-top pt-2 mb-3">
-              <div class="precio-tarifa">${formatCLP(maq.tarifa_diaria)} <small>/ día</small></div>
-              <div class="precio-garantia">
-                <i class="fa-solid fa-shield-halved me-1 text-warning"></i>Garantía fija: ${formatCLP(maq.garantia_fija)}
+            <div class="border-top pt-2 mb-3 bg-light p-2 rounded-2">
+              <div class="d-flex justify-content-between align-items-baseline">
+                <span class="small text-muted">Tarifa Diaria:</span>
+                <span class="precio-tarifa">${formatCLP(maq.tarifa_diaria)} <small>/día</small></span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center mt-1">
+                <span class="small text-muted">Garantía Fija:</span>
+                <span class="precio-garantia fw-bold text-dark">${formatCLP(maq.garantia_fija)}</span>
               </div>
             </div>
 

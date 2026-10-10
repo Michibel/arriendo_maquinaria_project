@@ -1,9 +1,9 @@
 /*
 ================================================================================
 PROYECTO 6: ARRIENDO DE MAQUINARIA DE CONSTRUCCIÓN (RENTING / SERVICIOS)
-HOJA DE ESTILOS PERSONALIZADA (styles.css)
+HOJA DE ESTILOS PROFESIONAL INDUSTRIAL (styles.css)
 Autor: Gabriel Michibel | Sección: IEC-N4-C1 | Año: 2026
-Paleta de colores: Amarillo Industrial (#f59e0b / #fbbf24), Pizarra Oscura (#0f172a / #1e293b)
+Inspirado en plataformas líderes de arriendo en Chile (RendaloMaq, Bimaq, GAM)
 ================================================================================
 */
 
@@ -11,16 +11,22 @@ Paleta de colores: Amarillo Industrial (#f59e0b / #fbbf24), Pizarra Oscura (#0f1
   --industrial-yellow: #f59e0b;
   --industrial-yellow-dark: #d97706;
   --industrial-yellow-light: #fef3c7;
+  --industrial-orange: #ea580c;
   --industrial-dark: #0f172a;
+  --industrial-darker: #020617;
   --industrial-dark-card: #1e293b;
   --industrial-gray: #334155;
+  --industrial-gray-light: #64748b;
   --industrial-light: #f8fafc;
   --industrial-border: #e2e8f0;
+  --industrial-border-dark: #334155;
+  --transbank-red: #da291c;
+  --transbank-navy: #002d72;
 }
 
 body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  background-color: #f8fafc;
+  background-color: #f1f5f9;
   color: #1e293b;
   min-height: 100vh;
   display: flex;
@@ -32,11 +38,33 @@ main {
 }
 
 /* --------------------------------------------------------------------------
+   BARRA SUPERIOR DE CONTACTO Y FAENAS (TOPBAR)
+-------------------------------------------------------------------------- */
+.topbar-industrial {
+  background-color: var(--industrial-darker);
+  color: #94a3b8;
+  font-size: 0.8rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 0;
+}
+
+.topbar-industrial a {
+  color: #cbd5e1;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.topbar-industrial a:hover {
+  color: var(--industrial-yellow);
+}
+
+/* --------------------------------------------------------------------------
    NAVBAR INDUSTRIAL
 -------------------------------------------------------------------------- */
 .navbar-industrial {
   background-color: var(--industrial-dark);
   border-bottom: 3px solid var(--industrial-yellow);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 .navbar-brand-industrial {
@@ -45,7 +73,7 @@ main {
   color: #ffffff !important;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .navbar-brand-industrial span {
@@ -54,7 +82,8 @@ main {
 
 .nav-link-industrial {
   color: #cbd5e1 !important;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 0.92rem;
   transition: all 0.2s ease;
   padding: 0.5rem 0.85rem !important;
   border-radius: 6px;
@@ -67,23 +96,72 @@ main {
 }
 
 /* --------------------------------------------------------------------------
-   HERO BANNER
+   HERO BANNER INDUSTRIAL
 -------------------------------------------------------------------------- */
 .hero-industrial {
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9)),
-              url('https://images.unsplash.com/photo-1541888946425-d0fbb186c5f7?auto=format&fit=crop&w=1600&q=80') center/cover;
+  background: linear-gradient(135deg, rgba(2, 6, 23, 0.94), rgba(15, 23, 42, 0.88)),
+              url('https://images.unsplash.com/photo-1541888946425-d0fbb186c5f7?auto=format&fit=crop&w=1920&q=85') center/cover no-repeat;
   color: #ffffff;
-  padding: 4rem 1rem;
+  padding: 4.5rem 1rem 3.5rem 1rem;
   border-bottom: 4px solid var(--industrial-yellow);
+  position: relative;
 }
 
 .hero-title {
   font-weight: 800;
-  font-size: 2.5rem;
+  font-size: 2.75rem;
+  line-height: 1.2;
 }
 
 .hero-title span {
   color: var(--industrial-yellow);
+  text-shadow: 0 0 25px rgba(245, 158, 11, 0.35);
+}
+
+/* --------------------------------------------------------------------------
+   PILAR DE BENEFICIOS Y CONFIANZA (ESTILO RENDALOMAQ / BIMAQ)
+-------------------------------------------------------------------------- */
+.trust-bar {
+  background-color: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e2e8f0;
+  margin-top: -2.5rem;
+  position: relative;
+  z-index: 10;
+  padding: 1.25rem 1.5rem;
+}
+
+.trust-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.trust-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background-color: rgba(245, 158, 11, 0.12);
+  color: var(--industrial-yellow-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  flex-shrink: 0;
+}
+
+.trust-text h6 {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--industrial-dark);
+  margin-bottom: 2px;
+}
+
+.trust-text p {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-bottom: 0;
 }
 
 /* --------------------------------------------------------------------------
@@ -91,24 +169,25 @@ main {
 -------------------------------------------------------------------------- */
 .card-maquinaria {
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
   background-color: #ffffff;
   display: flex;
   flex-direction: column;
   height: 100%;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
 }
 
 .card-maquinaria:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.12);
+  transform: translateY(-6px);
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
   border-color: var(--industrial-yellow);
 }
 
 .card-maquinaria-img-wrap {
   position: relative;
-  height: 210px;
+  height: 220px;
   background-color: #0f172a;
   overflow: hidden;
 }
@@ -117,11 +196,11 @@ main {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.4s ease;
+  transition: transform 0.45s ease;
 }
 
 .card-maquinaria:hover .card-maquinaria-img {
-  transform: scale(1.05);
+  transform: scale(1.07);
 }
 
 .badge-stock {
@@ -129,29 +208,45 @@ main {
   top: 12px;
   right: 12px;
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   padding: 6px 12px;
   border-radius: 20px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .badge-categoria {
   position: absolute;
   bottom: 12px;
   left: 12px;
-  background: rgba(15, 23, 42, 0.85);
+  background: rgba(15, 23, 42, 0.88);
   color: #ffffff;
   font-size: 0.75rem;
-  padding: 4px 10px;
+  font-weight: 600;
+  padding: 5px 11px;
   border-radius: 15px;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(6px);
   border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
+.badge-specs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.73rem;
+  background-color: #f1f5f9;
+  color: #475569;
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-right: 4px;
+  margin-bottom: 4px;
+  border: 1px solid #e2e8f0;
+}
+
 .precio-tarifa {
-  font-size: 1.4rem;
+  font-size: 1.45rem;
   font-weight: 800;
   color: var(--industrial-dark);
+  line-height: 1.1;
 }
 
 .precio-tarifa small {
@@ -161,7 +256,7 @@ main {
 }
 
 .precio-garantia {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: #64748b;
 }
 
@@ -174,6 +269,7 @@ main {
   font-weight: 700;
   border: none;
   transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.25);
 }
 
 .btn-industrial:hover,
@@ -181,6 +277,7 @@ main {
   background-color: var(--industrial-yellow-dark);
   color: #ffffff;
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.35);
 }
 
 .btn-industrial-outline {
@@ -193,6 +290,191 @@ main {
 .btn-industrial-outline:hover {
   background-color: var(--industrial-yellow);
   color: #0f172a;
+}
+
+/* --------------------------------------------------------------------------
+   APARTADO REALISTA DE PAGO CON TARJETA (WEBPAY PLUS / TRANSBANK)
+-------------------------------------------------------------------------- */
+.payment-gateway-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 1.25rem;
+}
+
+.payment-method-card {
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.payment-method-card:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.payment-method-card.active {
+  border-color: var(--industrial-yellow-dark);
+  background: rgba(245, 158, 11, 0.05);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+
+.payment-method-card input[type="radio"] {
+  accent-color: var(--industrial-yellow-dark);
+}
+
+/* VISUAL CREDIT / DEBIT CARD PREVIEW MOCKUP */
+.card-wrapper-3d {
+  perspective: 1000px;
+  margin-bottom: 1.5rem;
+}
+
+.credit-card-preview {
+  width: 100%;
+  max-width: 380px;
+  height: 220px;
+  margin: 0 auto;
+  border-radius: 18px;
+  padding: 22px 24px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #020617 100%);
+  position: relative;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  transition: transform 0.3s ease;
+}
+
+.credit-card-preview:before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  right: -30%;
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.25) 0%, rgba(245, 158, 11, 0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.card-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-chip {
+  width: 44px;
+  height: 32px;
+  background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+  border-radius: 6px;
+  position: relative;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.card-chip:after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.card-contactless {
+  font-size: 1.3rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-left: 10px;
+}
+
+.card-brand-logo {
+  font-weight: 800;
+  font-size: 1.25rem;
+  letter-spacing: 1px;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.card-number-display {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.35rem;
+  letter-spacing: 3px;
+  font-weight: 700;
+  color: #f8fafc;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  margin: 10px 0;
+}
+
+.card-bottom-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.card-label-small {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 1px;
+  margin-bottom: 2px;
+}
+
+.card-holder-display {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #ffffff;
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-expiry-display {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+/* MEDIOS DE PAGO Y SELLOS DE SEGURIDAD */
+.security-badge-box {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.brand-pills-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.brand-pill {
+  height: 24px;
+  padding: 2px 8px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #334155;
 }
 
 /* --------------------------------------------------------------------------
@@ -224,19 +506,39 @@ main {
 }
 
 /* --------------------------------------------------------------------------
-   FOOTER INSTITUCIONAL
+   FOOTER INSTITUCIONAL PROFESIONAL
 -------------------------------------------------------------------------- */
 .footer-industrial {
-  background-color: var(--industrial-dark);
+  background-color: var(--industrial-darker);
   color: #94a3b8;
-  padding: 2.5rem 0 1.5rem 0;
+  padding: 3.5rem 0 1.5rem 0;
   margin-top: auto;
-  border-top: 3px solid var(--industrial-yellow);
+  border-top: 4px solid var(--industrial-yellow);
+}
+
+.footer-industrial h6 {
+  color: #ffffff;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+}
+
+.footer-industrial ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footer-industrial ul li {
+  margin-bottom: 0.5rem;
 }
 
 .footer-industrial a {
-  color: #cbd5e1;
+  color: #94a3b8;
   text-decoration: none;
+  font-size: 0.88rem;
+  transition: color 0.2s ease;
 }
 
 .footer-industrial a:hover {
@@ -244,28 +546,29 @@ main {
 }
 
 .footer-badge-student {
-  background: rgba(245, 158, 11, 0.15);
+  background: rgba(245, 158, 11, 0.12);
   border: 1px solid var(--industrial-yellow);
   color: var(--industrial-yellow);
-  padding: 8px 16px;
+  padding: 9px 18px;
   border-radius: 8px;
   font-weight: 700;
   display: inline-block;
   letter-spacing: 0.5px;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.1);
 }
 
 /* --------------------------------------------------------------------------
    MODAL DE ARRIENDO CON CÁLCULO EN VIVO
 -------------------------------------------------------------------------- */
 .calculo-preview-box {
-  background-color: #f1f5f9;
+  background-color: #f8fafc;
   border: 2px dashed #cbd5e1;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 1.25rem;
 }
 
 .calculo-preview-box .total-highlight {
   font-size: 1.6rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--industrial-dark);
 }

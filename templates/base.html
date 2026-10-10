@@ -4,7 +4,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}RentaMaq Industrial | Arriendo de Maquinaria de Construcción{% endblock %}</title>
+  <title>{% block title %}RentaMaq Industrial | Arriendo de Maquinaria de Construcción en Chile{% endblock %}</title>
+
+  <!-- Google Fonts: Inter / Montserrat -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -17,29 +22,53 @@
 <body>
 
   <!-- ========================================================================
-       BARRA DE NAVEGACIÓN SUPERIOR (NAVBAR INDUSTRIAL)
+       BARRA SUPERIOR DE OPERACIONES Y FAENAS (TOPBAR)
+       ======================================================================== -->
+  <div class="topbar-industrial d-none d-md-block">
+    <div class="container-fluid px-lg-5">
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-4">
+          <span><i class="fa-solid fa-phone text-warning me-1"></i> Central Faenas: <strong>+56 9 8456 2200</strong></span>
+          <span><i class="fa-solid fa-envelope text-warning me-1"></i> contacto@rentamaq.cl</span>
+          <span><i class="fa-solid fa-location-dot text-warning me-1"></i> Cobertura Nacional de Arica a Punta Arenas</span>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+          <span class="badge bg-warning text-dark fw-bold"><i class="fa-solid fa-bolt me-1"></i>Despacho Express 24-48 hrs</span>
+          <a href="/api/docs/" target="_blank" class="small"><i class="fa-solid fa-code me-1"></i>OpenAPI 3.0</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       BARRA DE NAVEGACIÓN PRINCIPAL (NAVBAR INDUSTRIAL)
        ======================================================================== -->
   <nav class="navbar navbar-expand-lg navbar-dark navbar-industrial sticky-top">
     <div class="container-fluid px-lg-5">
       <a class="navbar-brand navbar-brand-industrial" href="{% url 'catalogo' %}">
-        <i class="fa-solid fa-truck-monster text-warning fa-lg"></i>
-        <span>RENTAMAQ</span> <small class="text-white-50 fw-normal">| Arriendo Industrial</small>
+        <div class="bg-warning text-dark p-2 rounded-3 d-inline-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+          <i class="fa-solid fa-truck-monster fa-lg"></i>
+        </div>
+        <div>
+          <span class="fs-4">RENTAMAQ</span>
+          <small class="d-block text-white-50 fw-normal" style="font-size: 0.7rem; letter-spacing: 1px;">ARRIENDO & FLOTA PESADA</small>
+        </div>
       </a>
 
-      <button class="navbar-toggler border-warning" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+      <button class="navbar-toggler border-warning" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-label="Abrir menú">
         <span class="navbar-toggler-icon"></span>
       </button>
 
       <div class="collapse navbar-collapse" id="navbarMain">
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
           <li class="nav-item">
             <a class="nav-link nav-link-industrial" href="{% url 'catalogo' %}">
-              <i class="fa-solid fa-shapes me-1"></i> Catálogo de Flota
+              <i class="fa-solid fa-shapes me-1 text-warning"></i> Catálogo de Flota
             </a>
           </li>
           <li class="nav-item">
             <a id="nav-link-contratos" class="nav-link nav-link-industrial" href="{% url 'mis_contratos_web' %}" style="display: none;">
-              <i class="fa-solid fa-file-contract me-1"></i> Mis Arriendos
+              <i class="fa-solid fa-file-contract me-1 text-warning"></i> Mis Arriendos
             </a>
           </li>
           <li class="nav-item">
@@ -49,7 +78,7 @@
           </li>
           <li class="nav-item">
             <a class="nav-link nav-link-industrial" href="/api/docs/" target="_blank">
-              <i class="fa-solid fa-code me-1"></i> Swagger API
+              <i class="fa-solid fa-file-code me-1 text-warning"></i> Swagger API
             </a>
           </li>
         </ul>
@@ -57,17 +86,17 @@
         <!-- Acciones de Usuario y Carro Persistente -->
         <div class="d-flex align-items-center gap-3">
           <!-- Carro de Arriendo con Contador Reactivo -->
-          <a id="nav-link-carro" href="{% url 'carro' %}" class="btn btn-outline-warning position-relative px-3 py-1">
-            <i class="fa-solid fa-cart-shopping me-1"></i> Carro
-            <span id="cart-counter-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+          <a id="nav-link-carro" href="{% url 'carro' %}" class="btn btn-outline-warning position-relative px-3 py-2 fw-bold">
+            <i class="fa-solid fa-cart-shopping me-1"></i> Carro de Arriendos
+            <span id="cart-counter-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light">
               0
             </span>
           </a>
 
           <!-- Zona para Usuarios NO Autenticados -->
           <div id="nav-guest-zone" class="d-flex gap-2">
-            <a href="{% url 'login_web' %}" class="btn btn-industrial px-3 py-1">
-              <i class="fa-solid fa-arrow-right-to-bracket me-1"></i> Acceder
+            <a href="{% url 'login_web' %}" class="btn btn-industrial px-3 py-2">
+              <i class="fa-solid fa-arrow-right-to-bracket me-1"></i> Acceso Empresas
             </a>
           </div>
 
@@ -100,19 +129,80 @@
   </main>
 
   <!-- ========================================================================
-       PIE DE PÁGINA (FOOTER BASE OBLIGATORIO DE LA PAUTA)
-       Datos del Estudiante: [Nombre Completo] | [Sección] | Año [Año]
+       PIE DE PÁGINA PROFESIONAL (ESTILO REALISTA EMPRESARIAL + FOOTER OBLIGATORIO)
        ======================================================================== -->
   <footer class="footer-industrial">
-    <div class="container text-center">
-      <div class="row align-items-center gy-3">
-        <div class="col-md-4 text-md-start">
-          <h6 class="text-white fw-bold mb-1">
-            <i class="fa-solid fa-truck-monster text-warning me-2"></i>RENTAMAQ INDUSTRIAL
-          </h6>
-          <small class="text-white-50">Plataforma de Arriendo de Maquinaria Pesada para Faenas de Construcción y Minería.</small>
+    <div class="container">
+      <div class="row g-4 mb-4">
+        <!-- Columna 1: Empresa & Certificaciones -->
+        <div class="col-lg-4 col-md-6">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <div class="bg-warning text-dark p-2 rounded-2 d-inline-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+              <i class="fa-solid fa-truck-monster"></i>
+            </div>
+            <span class="text-white fw-bold fs-5">RENTAMAQ INDUSTRIAL</span>
+          </div>
+          <p class="small text-white-50 mb-3">
+            Plataforma digital líder en arriendo de maquinaria pesada, equipos de levante y generación para empresas constructoras y faenas mineras en todo Chile.
+          </p>
+          <div class="small text-white-50">
+            <div><i class="fa-solid fa-id-card text-warning me-2"></i>RUT Empresa: <strong>76.890.123-K</strong></div>
+            <div><i class="fa-solid fa-location-dot text-warning me-2"></i>Parque Central: Av. Américo Vespucio 1234, Pudahuel, Santiago</div>
+            <div><i class="fa-solid fa-shield-halved text-warning me-2"></i>Equipos certificados bajo norma <strong>SEC & CESMEC</strong></div>
+          </div>
         </div>
-        
+
+        <!-- Columna 2: Categorías de Flota -->
+        <div class="col-lg-2 col-md-6">
+          <h6>FLOTA PESADA</h6>
+          <ul>
+            <li><a href="{% url 'catalogo' %}"><i class="fa-solid fa-angle-right me-1 text-warning"></i>Excavadoras</a></li>
+            <li><a href="{% url 'catalogo' %}"><i class="fa-solid fa-angle-right me-1 text-warning"></i>Minicargadores</a></li>
+            <li><a href="{% url 'catalogo' %}"><i class="fa-solid fa-angle-right me-1 text-warning"></i>Grúas Horquilla</a></li>
+            <li><a href="{% url 'catalogo' %}"><i class="fa-solid fa-angle-right me-1 text-warning"></i>Rodillos Compactadores</a></li>
+            <li><a href="{% url 'catalogo' %}"><i class="fa-solid fa-angle-right me-1 text-warning"></i>Generadores Eléctricos</a></li>
+          </ul>
+        </div>
+
+        <!-- Columna 3: Cobertura y Servicios -->
+        <div class="col-lg-3 col-md-6">
+          <h6>SERVICIOS EN FAENA</h6>
+          <ul>
+            <li><span class="text-white-50 small"><i class="fa-solid fa-truck-fast text-warning me-1"></i>Entrega y Retiro Directo en Obra</span></li>
+            <li><span class="text-white-50 small"><i class="fa-solid fa-wrench text-warning me-1"></i>Mantenimiento Preventivo Incluido</span></li>
+            <li><span class="text-white-50 small"><i class="fa-solid fa-satellite-dish text-warning me-1"></i>Telemetría y Rastreo GPS 24/7</span></li>
+            <li><span class="text-white-50 small"><i class="fa-solid fa-file-invoice text-warning me-1"></i>Facturación Electrónica Automática</span></li>
+            <li><span class="text-white-50 small"><i class="fa-solid fa-headset text-warning me-1"></i>Soporte Técnico en Terreno</span></li>
+          </ul>
+        </div>
+
+        <!-- Columna 4: Medios de Pago & Seguridad -->
+        <div class="col-lg-3 col-md-6">
+          <h6>PAGO SEGURO Y CONFIANZA</h6>
+          <p class="small text-white-50 mb-2">
+            Procesamiento seguro mediante pasarela Webpay Plus Transbank con encriptación de 256 bits.
+          </p>
+          <div class="d-flex flex-wrap gap-2 mb-3">
+            <span class="badge bg-light text-dark fw-bold border"><i class="fa-solid fa-credit-card text-danger me-1"></i>Webpay Plus</span>
+            <span class="badge bg-light text-dark fw-bold border"><i class="fa-brands fa-cc-visa text-primary me-1"></i>Visa</span>
+            <span class="badge bg-light text-dark fw-bold border"><i class="fa-brands fa-cc-mastercard text-warning me-1"></i>Mastercard</span>
+            <span class="badge bg-light text-dark fw-bold border"><i class="fa-solid fa-building-columns text-success me-1"></i>Redcompra</span>
+          </div>
+          <div class="alert alert-dark border-secondary p-2 small mb-0 text-white-50">
+            <i class="fa-solid fa-lock text-warning me-1"></i>Certificación PCI-DSS Nivel 1
+          </div>
+        </div>
+      </div>
+
+      <hr class="my-4 border-secondary">
+
+      <!-- Fila de Identificación del Estudiante e Institución -->
+      <div class="row align-items-center gy-3">
+        <div class="col-md-4 text-center text-md-start">
+          <small class="text-white-50 d-block">Backend: Django REST Framework 3.18 & PostgreSQL</small>
+          <small class="text-white-50">SimpleJWT RBAC | Swagger OpenAPI 3.0</small>
+        </div>
+
         <div class="col-md-4 text-center">
           <!-- CUMPLIMIENTO ESTRICTO DE LA PAUTA DE EVALUACIÓN -->
           <div class="footer-badge-student">
@@ -121,16 +211,12 @@
           </div>
         </div>
 
-        <div class="col-md-4 text-md-end">
-          <small class="text-white-50 d-block">Backend: Django REST Framework 3.18 & PostgreSQL 18</small>
-          <small class="text-white-50">Autenticación SimpleJWT con Roles RBAC | Swagger OpenAPI 3.0</small>
+        <div class="col-md-4 text-center text-md-end">
+          <div class="small text-white-50">
+            <div>Evaluación 2 (EVA-2) - Arquitectura y Desarrollo Backend</div>
+            <strong class="text-warning">Inacap Temuco - Ingeniería en Ciberseguridad</strong>
+          </div>
         </div>
-      </div>
-      
-      <hr class="my-3 border-secondary">
-      <div class="d-flex justify-content-between flex-wrap small text-white-50">
-        <span>Evaluación 2 (EVA-2) - Arquitectura y Desarrollo Backend</span>
-        <span>Inacap Temuco - Ingeniería en Ciberseguridad</span>
       </div>
     </div>
   </footer>
