@@ -17,9 +17,14 @@ y transaccionalidad atómica (@transaction.atomic) para:
 
 from decimal import Decimal
 from datetime import date, datetime, timedelta
+import time
+import requests
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from django.db import transaction
 from django.db.models import Sum, Count, Avg, F, Q
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import viewsets, generics, status, permissions
@@ -28,6 +33,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
+
 
 from .models import (
     Usuario,
@@ -421,6 +427,268 @@ class CheckoutInvitadoView(APIView):
             'mensaje': "¡Arriendo confirmado y pagado exitosamente en modalidad invitado!",
             'contrato': resp_serializer.data
         }, status=status.HTTP_201_CREATED)
+
+
+# ==============================================================================
+# BLOQUE 4.2: PASARELA OFICIAL TRANSBANK WEBPAY PLUS (AMBIENTE DE INTEGRACIÓN)
+# ==============================================================================
+TBK_COMMERCE_CODE = "597055555532"
+TBK_API_KEY = "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C"
+TBK_API_URL = "https://webpay3gint.transbank.cl/rswebpaytransaction/api/webpay/v1.2/transactions"
+
+
+class WebpayIniciarView(APIView):
+    """
+    Endpoint POST /api/webpay/iniciar/
+    Inicia una transacción real en la pasarela oficial de Transbank Webpay Plus
+    (Ambiente de Integración / Pruebas con Tarjetas Oficiales Transbank).
+    Soporta tanto Empresa Constructora registrada como Usuario Invitado.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        es_autenticado = request.user and request.user.is_authenticated
+
+        if es_autenticado:
+            carro, _ = CarroArriendo.objects.get_or_create(usuario=request.user)
+            items = list(carro.items.select_related('maquinaria').all())
+            if not items:
+                return Response({'error': "El carro de arriendo se encuentra vacío."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Validar stock disponible
+            for it in items:
+                maq = Maquinaria.objects.filter(id=it.maquinaria_id).first()
+                if not maq or maq.unidades_disponibles < it.cantidad:
+                    return Response({
+                        'error': f"Stock insuficiente para '{maq.nombre if maq else 'equipo'}'. No hay unidades disponibles."
+                    }, status=status.HTTP_409_CONFLICT)
+
+            # Crear contrato en estado PENDIENTE
+            monto_total = sum(it.costo_calculado for it in items)
+            contrato = ContratoArriendo.objects.create(
+                usuario=request.user,
+                estado=ContratoArriendo.ESTADO_PENDIENTE,
+                monto_total=monto_total
+            )
+
+            # Snapshot preliminar de detalle
+            for it in items:
+                maq = it.maquinaria
+                DetalleContrato.objects.create(
+                    contrato=contrato,
+                    maquinaria=maq,
+                    nombre_maquinaria=maq.nombre,
+                    tarifa_diaria=maq.tarifa_diaria,
+                    garantia_fija=maq.garantia_fija,
+                    fecha_inicio=it.fecha_inicio,
+                    fecha_fin=it.fecha_fin,
+                    dias_uso=it.dias_uso,
+                    subtotal=it.costo_calculado
+                )
+        else:
+            # Modo Invitado
+            serializer = CheckoutInvitadoSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            datos = serializer.validated_data
+            items_data = datos['items']
+
+            # Validar stock
+            maquinarias_dict = {}
+            for it in items_data:
+                maq = Maquinaria.objects.filter(id=it['maquinaria_id']).first()
+                if not maq or maq.unidades_disponibles < 1:
+                    return Response({
+                        'error': f"Stock insuficiente para '{maq.nombre if maq else 'equipo'}'."
+                    }, status=status.HTTP_409_CONFLICT)
+                maquinarias_dict[it['maquinaria_id']] = maq
+
+            monto_total = Decimal('0.00')
+            detalles_data = []
+            for it in items_data:
+                maq = maquinarias_dict[it['maquinaria_id']]
+                f_ini = it['fecha_inicio']
+                f_fin = it['fecha_fin']
+                dias = max(1, (f_fin - f_ini).days)
+                costo = (maq.tarifa_diaria * Decimal(dias)) + maq.garantia_fija
+                monto_total += costo
+                detalles_data.append({
+                    'maq': maq, 'f_ini': f_ini, 'f_fin': f_fin, 'dias': dias, 'costo': costo
+                })
+
+            contrato = ContratoArriendo.objects.create(
+                usuario=None,
+                es_invitado=True,
+                nombre_cliente=datos['nombre_cliente'],
+                rut_cliente=datos['rut_cliente'],
+                email_cliente=datos['email_cliente'],
+                telefono_cliente=datos['telefono_cliente'],
+                estado=ContratoArriendo.ESTADO_PENDIENTE,
+                monto_total=monto_total
+            )
+
+            for d in detalles_data:
+                DetalleContrato.objects.create(
+                    contrato=contrato,
+                    maquinaria=d['maq'],
+                    nombre_maquinaria=d['maq'].nombre,
+                    tarifa_diaria=d['maq'].tarifa_diaria,
+                    garantia_fija=d['maq'].garantia_fija,
+                    fecha_inicio=d['f_ini'],
+                    fecha_fin=d['f_fin'],
+                    dias_uso=d['dias'],
+                    subtotal=d['costo']
+                )
+
+        # Iniciar transacción en la API oficial de Transbank
+        buy_order = f"RMQ-{contrato.id}-{int(time.time())}"[:26]
+        session_id = f"SES-{contrato.id}-{int(time.time())}"[:26]
+        amount = int(contrato.monto_total)
+        return_url = request.build_absolute_uri('/api/webpay/retorno/')
+
+        headers = {
+            'Tbk-Api-Key-Id': TBK_COMMERCE_CODE,
+            'Tbk-Api-Key-Secret': TBK_API_KEY,
+            'Content-Type': 'application/json'
+        }
+        payload = {
+            'buy_order': buy_order,
+            'session_id': session_id,
+            'amount': amount,
+            'return_url': return_url
+        }
+
+        try:
+            tbk_resp = requests.post(TBK_API_URL, json=payload, headers=headers, timeout=12)
+            if tbk_resp.status_code == 200:
+                tbk_data = tbk_resp.json()
+                contrato.tbk_token = tbk_data['token']
+                contrato.tbk_orden_compra = buy_order
+                contrato.save()
+
+                return Response({
+                    'mensaje': "Transacción Webpay Plus inicializada correctamente.",
+                    'token': tbk_data['token'],
+                    'url': tbk_data['url'],
+                    'buy_order': buy_order,
+                    'monto': amount,
+                    'contrato_id': contrato.id
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    'error': f"Error al comunicar con Transbank: {tbk_resp.text}"
+                }, status=status.HTTP_502_BAD_GATEWAY)
+        except Exception as e:
+            return Response({
+                'error': f"Falla de conexión con la pasarela Transbank: {str(e)}"
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class WebpayRetornoView(View):
+    """
+    Endpoint GET/POST /api/webpay/retorno/
+    Recibe la redirección oficial desde Transbank Webpay Plus tras el pago
+    del cliente con la tarjeta de prueba.
+    Valida y confirma (commit) la transacción, descuenta stock y renderiza comprobante.
+    """
+    def get(self, request):
+        return self.procesar_retorno(request)
+
+    def post(self, request):
+        return self.procesar_retorno(request)
+
+    def procesar_retorno(self, request):
+        token_ws = request.GET.get('token_ws') or request.POST.get('token_ws')
+        tbk_token_abort = request.GET.get('TBK_TOKEN') or request.POST.get('TBK_TOKEN')
+
+        # Caso 1: El usuario canceló la transacción en Webpay
+        if tbk_token_abort and not token_ws:
+            contrato = ContratoArriendo.objects.filter(tbk_token=tbk_token_abort).first()
+            if contrato:
+                contrato.estado = ContratoArriendo.ESTADO_CANCELADO
+                contrato.save()
+            return render(request, 'comprobante_webpay.html', {
+                'exito': False,
+                'motivo': 'ANULADO',
+                'mensaje': 'La transacción fue cancelada voluntariamente en la pasarela de Webpay Plus.',
+                'contrato': contrato
+            })
+
+        if not token_ws:
+            return render(request, 'comprobante_webpay.html', {
+                'exito': False,
+                'motivo': 'SIN_TOKEN',
+                'mensaje': 'No se recibió el token de confirmación de Transbank.'
+            })
+
+        # Caso 2: Confirmar transacción (COMMIT) en Transbank
+        headers = {
+            'Tbk-Api-Key-Id': TBK_COMMERCE_CODE,
+            'Tbk-Api-Key-Secret': TBK_API_KEY,
+            'Content-Type': 'application/json'
+        }
+        commit_url = f"{TBK_API_URL}/{token_ws}"
+
+        try:
+            tbk_resp = requests.put(commit_url, headers=headers, json={}, timeout=12)
+            tbk_data = tbk_resp.json()
+        except Exception as e:
+            return render(request, 'comprobante_webpay.html', {
+                'exito': False,
+                'motivo': 'ERROR_CONEXION',
+                'mensaje': f'Error al confirmar la transacción con Transbank: {str(e)}'
+            })
+
+        contrato = ContratoArriendo.objects.filter(tbk_token=token_ws).first()
+
+        # Verificar si fue autorizada
+        if tbk_resp.status_code == 200 and tbk_data.get('response_code') == 0 and tbk_data.get('status') == 'AUTHORIZED':
+            if contrato:
+                with transaction.atomic():
+                    # Descontar stock de cada máquina
+                    for det in contrato.detalles.all():
+                        maq = Maquinaria.objects.select_for_update().get(id=det.maquinaria_id)
+                        maq.unidades_disponibles = max(0, maq.unidades_disponibles - 1)
+                        maq.save()
+
+                    contrato.estado = ContratoArriendo.ESTADO_PAGADO
+                    contrato.tbk_codigo_autorizacion = str(tbk_data.get('authorization_code', ''))
+                    card_num = tbk_data.get('card_detail', {}).get('card_number', '••••')
+                    contrato.tbk_tarjeta_ultimos4 = card_num
+                    contrato.save()
+
+                    # Vaciar carro del usuario registrado si corresponde
+                    if contrato.usuario:
+                        carro = CarroArriendo.objects.filter(usuario=contrato.usuario).first()
+                        if carro:
+                            carro.items.all().delete()
+
+            return render(request, 'comprobante_webpay.html', {
+                'exito': True,
+                'contrato': contrato,
+                'tbk_data': tbk_data,
+                'codigo_autorizacion': tbk_data.get('authorization_code'),
+                'tarjeta_ultimos4': tbk_data.get('card_detail', {}).get('card_number', '••••'),
+                'tipo_pago': tbk_data.get('payment_type_code', 'VN'),
+                'fecha_transaccion': tbk_data.get('transaction_date', ''),
+                'monto_total': f"${int(contrato.monto_total):,} CLP".replace(',', '.') if contrato else '$0 CLP'
+            })
+        else:
+            # Transacción rechazada
+            if contrato:
+                contrato.estado = ContratoArriendo.ESTADO_CANCELADO
+                contrato.save()
+
+            return render(request, 'comprobante_webpay.html', {
+                'exito': False,
+                'motivo': 'RECHAZADA',
+                'codigo_respuesta': tbk_data.get('response_code'),
+                'mensaje': 'El pago fue rechazado por el emisor bancario de la tarjeta de prueba.',
+                'contrato': contrato
+            })
+
 
 
 class MisContratosListView(generics.ListAPIView):

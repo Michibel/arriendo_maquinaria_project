@@ -286,9 +286,12 @@ class ContratoArriendoSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'usuario', 'usuario_info', 'es_invitado', 'nombre_cliente',
             'rut_cliente', 'email_cliente', 'telefono_cliente',
-            'estado', 'monto_total', 'fecha_creacion', 'fecha_actualizacion', 'detalles'
+            'estado', 'monto_total', 'tbk_token', 'tbk_orden_compra',
+            'tbk_codigo_autorizacion', 'tbk_tarjeta_ultimos4',
+            'fecha_creacion', 'fecha_actualizacion', 'detalles'
         ]
         read_only_fields = ['id', 'usuario', 'monto_total', 'fecha_creacion', 'fecha_actualizacion']
+
 
     def get_usuario_info(self, obj):
         if obj.usuario:

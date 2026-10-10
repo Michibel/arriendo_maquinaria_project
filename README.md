@@ -10,13 +10,16 @@
 ---
 
 ## 🏗️ Descripción del Proyecto
-Plataforma web integral para la gestión y arriendo de maquinarias pesadas y equipos de construcción para empresas constructoras y faenas mineras. Implementa una arquitectura profesional desacoplada con **Django REST Framework (DRF)**, persistencia en **PostgreSQL**, autenticación **JWT con RBAC (Role-Based Access Control)**, transacciones atómicas para control de inventario/flota y un frontend responsivo basado en **Bootstrap 5**, **HTML5** y **JavaScript ES6**.
+Plataforma web integral para la gestión y arriendo de maquinarias pesadas y equipos de construcción para empresas constructoras y faenas mineras en todo Chile. Implementa una arquitectura profesional desacoplada con **Django REST Framework (DRF)**, persistencia en **PostgreSQL**, autenticación **JWT con RBAC (Role-Based Access Control)**, transacciones atómicas para control de inventario/flota y un frontend responsivo basado en **Bootstrap 5**, **HTML5** y **JavaScript ES6**.
+
+Incluye además una integración real con la pasarela oficial **Transbank Webpay Plus (REST API v1.2)** en ambiente de integración, permitiendo procesar pagos reales con tarjetas de prueba oficiales autorizadas por Transbank Chile.
 
 ---
 
 ## ⚙️ Tecnologías Utilizadas
 - **Backend:** Python 3.14 / Django 6.1 / Django REST Framework 3.18
 - **Base de Datos:** PostgreSQL nativo (`django.db.backends.postgresql`)
+- **Pasarela de Pagos:** Transbank Webpay Plus (REST API v1.2 Integration)
 - **Autenticación & Seguridad:** `djangorestframework-simplejwt` con claims personalizados de Rol
 - **Documentación API:** `drf-spectacular` (OpenAPI 3.0 / Swagger UI)
 - **Frontend:** HTML5 semántico, CSS3 personalizado con paleta industrial, Bootstrap 5.3 (Mobile-First), FontAwesome 6, Fetch API ES6
@@ -28,7 +31,8 @@ Plataforma web integral para la gestión y arriendo de maquinarias pesadas y equ
 1. **Cálculo de Tarifas y Días de Uso (Moneda Nacional Chilena - CLP):**
    ```text
    Días de Uso = max(1, fecha_fin - fecha_inicio)
-   Costo Ítem  = (tarifa_diaria × dias_uso) + garantia_fija
+   Cantidad    = número de unidades a arrendar
+   Costo Ítem  = (tarifa_diaria × dias_uso × cantidad) + (garantia_fija × cantidad)
    ```
    *Todos los valores monetarios de la plataforma se calculan y presentan en Pesos Chilenos (CLP), con formato `$X.XXX CLP` sin decimales.*
 
@@ -59,8 +63,37 @@ Plataforma web integral para la gestión y arriendo de maquinarias pesadas y equ
 7. **Soporte de Carro Temporal y Checkout para Usuario Invitado (Sin Registro):**
    - Los usuarios no registrados pueden explorar el catálogo y agregar maquinarias al carro de arriendo temporal sin necesidad de iniciar sesión previa.
    - El carro de invitado se mantiene de forma estrictamente temporal en la sesión del navegador (`sessionStorage`), sin generar registros huérfanos en la base de datos PostgreSQL y destruyéndose al cerrar la ventana.
-   - Al finalizar la compra (`POST /api/contratos/checkout-invitado/`), un modal interactivo captura los datos de contacto y facturación: Nombre completo, RUT, Email y Teléfono.
-   - La operación se ejecuta bajo `@transaction.atomic` garantizando el descuento atómico de stock en flota, la creación del `ContratoArriendo` (con `es_invitado=True`) y el snapshot inmutable en `DetalleContrato`.
+   - Al finalizar la compra, un modal interactivo captura los datos de contacto y facturación: Nombre completo, RUT, Email y Teléfono.
+
+8. **Integración Oficial con Transbank Webpay Plus (Ambiente de Integración):**
+   - Conexión directa mediante **REST API v1.2 de Transbank** (`https://webpay3gint.transbank.cl/`).
+   - Al confirmar el arriendo, el backend invoca `POST /api/webpay/iniciar/` generando la orden comercial y redirigiendo al navegador a la pasarela oficial de Transbank.
+   - El cliente realiza el pago en Transbank utilizando las **tarjetas de prueba autorizadas**.
+   - Al concluir, Transbank retorna al endpoint `/api/webpay/retorno/` donde el backend realiza el **commit bancario**, valida la aprobación, descuenta el stock atómicamente en PostgreSQL y emite el comprobante oficial con código de autorización.
+
+---
+
+## 💳 Pasarela de Pago Transbank Webpay Plus (Ambiente de Pruebas / Integración)
+
+> ⚠️ **AVISO OBLIGATORIO DE SEGURIDAD:**  
+> Esta plataforma opera en el **Ambiente Oficial de Integración de Transbank Chile**.  
+> **NO se deben ingresar tarjetas de crédito o débito reales.**  
+> Únicamente se deben utilizar las **Tarjetas de Prueba Oficiales de Transbank** detalladas a continuación:
+
+### 📋 Tarjetas de Prueba Oficiales Autorizadas por Transbank
+
+| Medio de Pago | Franquicia | Número de Tarjeta | Fecha Vencimiento | CVV | Clave PIN | Resultado Esperado |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 💳 **Crédito** | Visa | `6666 6666 6666 6666` | Cualquier fecha futura (ej: `12/28`) | `123` | N/A | **APROBADO** (Transacción Exitosa) |
+| 💳 **Crédito** | Mastercard | `5555 5555 5555 5555` | Cualquier fecha futura (ej: `12/28`) | `123` | N/A | **APROBADO** (Transacción Exitosa) |
+| 🏦 **Débito** | Redcompra | `6666 6666 6666 6666` | Cualquier fecha futura | `123` | `1234` | **APROBADO** (Transacción Exitosa) |
+| 💳 **Crédito** | Visa (Prueba Rechazo) | `4444 4444 4444 4444` | Cualquier fecha futura | `123` | N/A | **RECHAZADO** (Para probar manejo de errores) |
+
+### ⚙️ Parámetros Técnicos de Integración Transbank
+- **Código de Comercio de Prueba (Commerce Code):** `597055555532`
+- **Llave API de Integración (API Key Secret):** `579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C`
+- **Endpoint Inicial:** `POST https://webpay3gint.transbank.cl/rswebpaytransaction/api/webpay/v1.2/transactions`
+- **Endpoint Commit:** `PUT https://webpay3gint.transbank.cl/rswebpaytransaction/api/webpay/v1.2/transactions/{token_ws}`
 
 ---
 
@@ -121,20 +154,20 @@ python manage.py runserver
 
 ### Vistas Web (Frontend)
 - **Catálogo Principal:** `http://127.0.0.1:8000/` o `http://127.0.0.1:8000/catalogo/`
-- **Carro de Arriendo:** `http://127.0.0.1:8000/carro/`
+- **Carro de Arriendo & Pasarela:** `http://127.0.0.1:8000/carro/`
 - **Mis Arriendos (Cliente):** `http://127.0.0.1:8000/mis-contratos/`
 - **Panel Ejecutivo:** `http://127.0.0.1:8000/panel/`
 - **Iniciar Sesión / Registro:** `http://127.0.0.1:8000/login/`
 
-### Endpoints API REST & Documentación
+### Endpoints API REST & Pasarela Webpay
 - **Documentación Swagger UI:** `http://127.0.0.1:8000/api/docs/`
-- **Esquema OpenAPI:** `http://127.0.0.1:8000/api/schema/`
+- **Iniciar Pago Webpay Plus:** `POST /api/webpay/iniciar/`
+- **Retorno / Confirmación Webpay:** `GET / POST /api/webpay/retorno/`
 - **Catálogo Maquinarias:** `GET /api/maquinarias/`
 - **Carro de Arriendo:** `GET / POST / DELETE /api/carro-arriendo/`
-- **Checkout Atómico:** `POST /api/contratos/checkout/`
+- **Checkout Tradicional Directo:** `POST /api/contratos/checkout/`
 - **Mis Contratos:** `GET /api/mis-contratos/`
-- **Cambio de Estado:** `PATCH /api/contratos/{id}/estado/`
-- **Autenticación JWT:** `POST /api/auth/login/` (con Claims personalizados)
+- **Autenticación JWT:** `POST /api/auth/login/`
 
 ---
 

@@ -358,6 +358,31 @@ class ContratoArriendo(models.Model):
         default=Decimal('0.00'),
         verbose_name="Monto Total Contratado"
     )
+    # Campos de Auditoría Pasarela de Pago Transbank Webpay Plus
+    tbk_token = models.CharField(
+        max_length=120,
+        blank=True,
+        null=True,
+        verbose_name="Token Transbank Webpay"
+    )
+    tbk_orden_compra = models.CharField(
+        max_length=60,
+        blank=True,
+        null=True,
+        verbose_name="Orden de Compra Transbank"
+    )
+    tbk_codigo_autorizacion = models.CharField(
+        max_length=30,
+        blank=True,
+        null=True,
+        verbose_name="Código Autorización Transbank"
+    )
+    tbk_tarjeta_ultimos4 = models.CharField(
+        max_length=10,
+        blank=True,
+        null=True,
+        verbose_name="Últimos 4 Dígitos Tarjeta"
+    )
     fecha_creacion = models.DateTimeField(
         auto_now_add=True,
         verbose_name="Fecha de Creación"
@@ -366,6 +391,7 @@ class ContratoArriendo(models.Model):
         auto_now=True,
         verbose_name="Última Actualización"
     )
+
 
     class Meta:
         verbose_name = "Contrato de Arriendo"

@@ -32,7 +32,10 @@ from .views import (
     ContratoViewSet,
     DashboardStatsView,
     CheckoutInvitadoView,
+    WebpayIniciarView,
+    WebpayRetornoView,
 )
+
 
 app_name = 'api'
 
@@ -63,8 +66,11 @@ urlpatterns = [
     # --------------------------------------------------------------------------
     path('contratos/checkout/', CheckoutContratoView.as_view(), name='contratos_checkout'),
     path('contratos/checkout-invitado/', CheckoutInvitadoView.as_view(), name='contratos_checkout_invitado'),
+    path('webpay/iniciar/', WebpayIniciarView.as_view(), name='webpay_iniciar'),
+    path('webpay/retorno/', WebpayRetornoView.as_view(), name='webpay_retorno'),
     path('mis-contratos/', MisContratosListView.as_view(), name='mis_contratos'),
     path('dashboard/stats/', DashboardStatsView.as_view(), name='dashboard_stats'),
+
 
     # --------------------------------------------------------------------------
     # 4. RUTAS DEL ROUTER (Maquinarias, Categorías, Contratos Ejecutivos)

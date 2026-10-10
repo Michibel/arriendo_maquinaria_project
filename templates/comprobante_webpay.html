@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Comprobante de Pago Webpay Plus | RentaMaq Industrial Chile{% endblock %}
+
+{% block content %}
+<section class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-7 col-md-9">
+
+      {% if exito %}
+      <!-- ====================================================================
+           VOUCHER EXITOSO OFICIAL WEBPAY PLUS TRANSBANK
+           ==================================================================== -->
+      <div class="card border-0 shadow-lg rounded-4 overflow-hidden bg-white mb-4">
+        <!-- Encabezado Estilo Voucher Transbank -->
+        <div class="bg-success text-white p-4 text-center border-bottom border-success border-4">
+          <div class="d-inline-flex p-3 rounded-circle bg-white text-success shadow-sm mb-3">
+            <i class="fa-solid fa-circle-check fa-3x"></i>
+          </div>
+          <h3 class="fw-bold mb-1">¡Transacción Webpay Plus Aprobada!</h3>
+          <p class="mb-0 text-white-50 small">
+            Tu arriendo ha sido confirmado y procesado a través de la pasarela oficial de Transbank.
+          </p>
+        </div>
+
+        <div class="card-body p-4 p-md-5">
+          <!-- Banner de Certificación Transbank -->
+          <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded-3 border mb-4">
+            <div class="d-flex align-items-center gap-2">
+              <div class="bg-danger text-white px-2 py-1 rounded fw-bold small">TBK</div>
+              <span class="fw-bold text-dark small">Webpay Plus Transbank • Ambiente de Integración Oficial</span>
+            </div>
+            <span class="badge bg-success px-3 py-2"><i class="fa-solid fa-lock me-1"></i>PAGO AUTORIZADO</span>
+          </div>
+
+          <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">
+            <i class="fa-solid fa-receipt text-warning me-2"></i>Comprobante de Pago Electrónico
+          </h5>
+
+          <!-- Tabla de Datos del Voucher -->
+          <div class="table-responsive mb-4">
+            <table class="table table-sm table-borderless mb-0">
+              <tbody>
+                <tr>
+                  <td class="text-muted py-2">Comercio:</td>
+                  <td class="text-end fw-bold text-dark py-2">RENTAMAQ INDUSTRIAL SPA</td>
+                </tr>
+                <tr>
+                  <td class="text-muted py-2">RUT Comercio:</td>
+                  <td class="text-end fw-bold text-dark py-2">76.890.123-K</td>
+                </tr>
+                <tr>
+                  <td class="text-muted py-2">N° Contrato RentaMaq:</td>
+                  <td class="text-end fw-bold text-dark py-2">#{{ contrato.id }}</td>
+                </tr>
+                <tr>
+                  <td class="text-muted py-2">Orden de Compra:</td>
+                  <td class="text-end font-monospace text-dark py-2">{{ contrato.tbk_orden_compra }}</td>
+                </tr>
+                <tr>
+                  <td class="text-muted py-2">Código de Autorización Transbank:</td>
+                  <td class="text-end fw-bold text-success py-2 fs-6">{{ codigo_autorizacion }}</td>
+                </tr>
+                <tr>
+                  <td class="text-muted py-2">Tarjeta Utilizada:</td>
+                  <td class="text-end font-monospace text-dark py-2">•••• •••• •••• {{ tarjeta_ultimos4 }}</td>
+                </tr>
+                <tr>
+                  <td class="text-muted py-2">Tipo de Transacción:</td>
+                  <td class="text-end text-dark py-2">Venta Débito/Crédito ({{ tipo_pago }})</td>
+                </tr>
+                <tr>
+                  <td class="text-muted py-2">Fecha y Hora:</td>
+                  <td class="text-end text-muted small py-2">{{ fecha_transaccion }}</td>
+                </tr>
+                <tr class="border-top border-2">
+                  <td class="fs-5 fw-bold text-dark py-3">Monto Total Pagado:</td>
+                  <td class="text-end fs-4 fw-bold text-warning py-3">{{ monto_total }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Detalle de Equipos en el Contrato -->
+          {% if contrato.detalles.all %}
+          <div class="bg-light p-3 rounded-3 border mb-4">
+            <h6 class="fw-bold text-dark mb-2">
+              <i class="fa-solid fa-truck-monster text-warning me-1"></i>Equipos Reservados en Flota:
+            </h6>
+            <ul class="list-unstyled mb-0 small">
+              {% for det in contrato.detalles.all %}
+              <li class="d-flex justify-content-between py-1 border-bottom border-light">
+                <span><strong>{{ det.nombre_maquinaria }}</strong> ({{ det.dias_uso }} días: {{ det.fecha_inicio }} al {{ det.fecha_fin }})</span>
+                <span class="fw-bold">${{ det.subtotal }} CLP</span>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
+          <div class="alert alert-info border-start border-info border-4 small py-2 mb-4">
+            <i class="fa-solid fa-circle-info me-1"></i>
+            El stock de los equipos ha sido descontado atómicamente en PostgreSQL. Nuestro equipo de faenas se contactará para coordinar la entrega en obra.
+          </div>
+
+          <!-- Acciones de Navegación -->
+          <div class="d-flex gap-2 justify-content-center flex-wrap">
+            <button class="btn btn-outline-dark fw-bold px-3 py-2" onclick="window.print()">
+              <i class="fa-solid fa-print me-1"></i>Imprimir Comprobante
+            </button>
+            <a href="{% url 'catalogo' %}" class="btn btn-industrial fw-bold px-4 py-2">
+              <i class="fa-solid fa-shapes me-1"></i>Volver al Catálogo
+            </a>
+            <a href="{% url 'mis_contratos_web' %}" class="btn btn-outline-primary fw-bold px-3 py-2">
+              <i class="fa-solid fa-file-contract me-1"></i>Ver Mis Arriendos
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {% else %}
+      <!-- ====================================================================
+           VOUCHER RECHAZADO O ANULADO
+           ==================================================================== -->
+      <div class="card border-0 shadow-lg rounded-4 overflow-hidden bg-white mb-4">
+        <div class="bg-danger text-white p-4 text-center border-bottom border-danger border-4">
+          <div class="d-inline-flex p-3 rounded-circle bg-white text-danger shadow-sm mb-3">
+            <i class="fa-solid fa-circle-xmark fa-3x"></i>
+          </div>
+          <h3 class="fw-bold mb-1">Transacción No Completada</h3>
+          <p class="mb-0 text-white-50 small">
+            {{ mensaje }}
+          </p>
+        </div>
+
+        <div class="card-body p-4 p-md-5 text-center">
+          <div class="alert alert-light border text-start p-3 mb-4">
+            <div class="d-flex justify-content-between mb-1 small text-muted">
+              <span>Motivo:</span>
+              <strong class="text-danger">{{ motivo }}</strong>
+            </div>
+            {% if codigo_respuesta %}
+            <div class="d-flex justify-content-between mb-1 small text-muted">
+              <span>Código de Rechazo Transbank:</span>
+              <strong class="text-dark">{{ codigo_respuesta }}</strong>
+            </div>
+            {% endif %}
+            <div class="d-flex justify-content-between small text-muted">
+              <span>Estado en Flota:</span>
+              <span class="text-muted">No se efectuó cobro ni descuento de stock.</span>
+            </div>
+          </div>
+
+          <div class="bg-light p-3 rounded-3 border text-start small mb-4">
+            <h6 class="fw-bold text-dark mb-1"><i class="fa-solid fa-lightbulb text-warning me-1"></i>Para pagar con éxito en Transbank (Ambiente de Pruebas):</h6>
+            <p class="text-muted mb-2">Utiliza cualquiera de las tarjetas de prueba oficiales autorizadas:</p>
+            <ul class="mb-0 text-muted ps-3">
+              <li><strong>Crédito Visa:</strong> <code>6666 6666 6666 6666</code> (Vencimiento futuro, CVV 123)</li>
+              <li><strong>Crédito Mastercard:</strong> <code>5555 5555 5555 5555</code> (Vencimiento futuro, CVV 123)</li>
+              <li><strong>Débito Redcompra:</strong> <code>6666 6666 6666 6666</code> (Clave pin 1234)</li>
+            </ul>
+          </div>
+
+          <div class="d-flex gap-2 justify-content-center">
+            <a href="{% url 'carro' %}" class="btn btn-industrial fw-bold px-4 py-2">
+              <i class="fa-solid fa-rotate-left me-1"></i>Reintentar Pago en el Carro
+            </a>
+            <a href="{% url 'catalogo' %}" class="btn btn-outline-dark fw-bold px-3 py-2">
+              <i class="fa-solid fa-shapes me-1"></i>Volver al Catálogo
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+</section>
+{% endblock %}

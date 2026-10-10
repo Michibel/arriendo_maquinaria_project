@@ -322,57 +322,42 @@
                   </div>
                 </div>
 
-                <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
-                  <i class="fa-solid fa-credit-card text-warning me-1"></i>Datos de la Tarjeta
-                </h6>
-
-                <!-- Número de Tarjeta -->
-                <div class="mb-3">
-                  <label class="form-label small fw-bold mb-1">Número de Tarjeta <span class="text-danger">*</span></label>
-                  <div class="input-group">
-                    <span class="input-group-text bg-light"><i class="fa-solid fa-credit-card text-muted"></i></span>
-                    <input type="text" class="form-control font-monospace" id="card-number-input" 
-                           placeholder="4523 0012 3456 7890" maxlength="19" required>
+                <!-- Banner Oficial de Transbank Webpay Plus Integración -->
+                <div class="alert alert-warning border-start border-warning border-4 p-3 mb-3 rounded-3 shadow-sm">
+                  <div class="d-flex align-items-center justify-content-between mb-1">
+                    <strong class="text-dark small"><i class="fa-solid fa-flask-vial text-warning me-1"></i>Pasarela Oficial Transbank (Ambiente Integración)</strong>
+                    <span class="badge bg-dark text-warning">Tarjetas de Prueba</span>
                   </div>
-                </div>
-
-                <!-- Nombre del Titular -->
-                <div class="mb-3">
-                  <label class="form-label small fw-bold mb-1">Nombre y Apellido del Titular <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control text-uppercase" id="card-holder-input" 
-                         placeholder="TAL COMO APARECE EN LA TARJETA" maxlength="32" required>
-                </div>
-
-                <!-- Vencimiento & CVV -->
-                <div class="row g-2 mb-3">
-                  <div class="col-6">
-                    <label class="form-label small fw-bold mb-1">Vencimiento <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control text-center font-monospace" id="card-expiry-input" 
-                           placeholder="MM/AA" maxlength="5" required>
+                  <p class="small text-muted mb-2" style="font-size: 0.78rem;">
+                    Al confirmar, serás redirigido a la pantalla oficial de <strong>Transbank Webpay Plus</strong>. Para pagar exitosamente, usa estas tarjetas autorizadas:
+                  </p>
+                  <div class="row g-2">
+                    <div class="col-12 col-sm-6">
+                      <div class="p-2 bg-white rounded-2 border small">
+                        <strong class="d-block text-primary"><i class="fa-brands fa-cc-visa me-1"></i>Crédito Visa TBK</strong>
+                        <code class="fw-bold">6666 6666 6666 6666</code>
+                        <div class="text-muted" style="font-size: 0.7rem;">Venc: Futuro (12/28) | CVV: 123</div>
+                      </div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                      <div class="p-2 bg-white rounded-2 border small">
+                        <strong class="d-block text-warning"><i class="fa-brands fa-cc-mastercard me-1"></i>Crédito Mastercard TBK</strong>
+                        <code class="fw-bold">5555 5555 5555 5555</code>
+                        <div class="text-muted" style="font-size: 0.7rem;">Venc: Futuro (12/28) | CVV: 123</div>
+                      </div>
+                    </div>
+                    <div class="col-12">
+                      <div class="p-2 bg-white rounded-2 border small">
+                        <strong class="d-block text-success"><i class="fa-solid fa-building-columns me-1"></i>Débito Redcompra TBK</strong>
+                        <code class="fw-bold">6666 6666 6666 6666</code> • <span class="text-muted">Clave Pin: <code>1234</code></span>
+                      </div>
+                    </div>
                   </div>
-                  <div class="col-6">
-                    <label class="form-label small fw-bold mb-1">
-                      CVV / CVC <span class="text-danger">*</span>
-                      <i class="fa-solid fa-circle-question text-muted" title="3 dígitos al reverso de la tarjeta"></i>
-                    </label>
-                    <input type="password" class="form-control text-center font-monospace" id="card-cvv-input" 
-                           placeholder="123" maxlength="4" required>
-                  </div>
-                </div>
-
-                <!-- Selección de Cuotas -->
-                <div class="mb-3">
-                  <label class="form-label small fw-bold mb-1">Modalidad de Cuotas</label>
-                  <select class="form-select form-select-sm" id="card-cuotas-select">
-                    <option value="1">1 Cuota (Débito o Crédito al contado)</option>
-                    <option value="3" selected>3 Cuotas sin Interés (Promoción Obra RentaMaq)</option>
-                    <option value="6">6 Cuotas Mensuales</option>
-                    <option value="12">12 Cuotas Mensuales (Sujeto a evaluación bancaria)</option>
-                  </select>
                 </div>
 
               </div>
             </div>
+
           </div>
         </div>
 
@@ -381,8 +366,9 @@
             <i class="fa-solid fa-xmark me-1"></i>Cancelar
           </button>
           <button type="submit" id="btn-submit-pago-tarjeta" class="btn btn-industrial fw-bold px-4 py-2 fs-6 shadow-sm">
-            <i class="fa-solid fa-lock me-2"></i>Pagar Arriendo vía Webpay Plus
+            <i class="fa-solid fa-arrow-up-right-from-square me-2"></i>Continuar a Transbank Webpay Plus
           </button>
+
         </div>
       </form>
     </div>
@@ -843,36 +829,8 @@ function configurarEventosCarro() {
       btnSubmit.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Conectando con Transbank Webpay...`;
 
       try {
-        if (Auth.isAuthenticated()) {
-          // PROCESO ATÓMICO EN BACKEND (USUARIO REGISTRADO)
-          const resp = await apiFetch('/contratos/checkout/', { method: 'POST' });
-          const data = await resp.json();
-
-          if (resp.ok) {
-            if (modalPagoTarjetaBs) modalPagoTarjetaBs.hide();
-            Cart.syncCounter();
-
-            const contratoCreado = data.contrato || data;
-            document.getElementById('modal-exito-numero').textContent = `#${contratoCreado.id || '001'}`;
-            document.getElementById('modal-exito-auth').textContent = 'TBK-' + Math.floor(100000 + Math.random() * 900000);
-            document.getElementById('modal-exito-total').textContent = formatCLP(contratoCreado.monto_total || carroActual.monto_total);
-            
-            const btnRedir = document.getElementById('btn-exito-redireccion');
-            if (btnRedir) {
-              btnRedir.href = '/mis-contratos/';
-              btnRedir.innerHTML = `<i class="fa-solid fa-file-contract me-1"></i>Ver en Mis Arriendos`;
-            }
-
-            if (modalExitoArriendoBs) modalExitoArriendoBs.show();
-            await cargarCarro();
-          } else {
-            const errorMsg = data.error || data.detail || "No fue posible procesar el pago.";
-            showToast(errorMsg, "danger");
-            btnSubmit.disabled = false;
-            btnSubmit.innerHTML = `<i class="fa-solid fa-lock me-2"></i>Pagar Arriendo vía Webpay Plus`;
-          }
-        } else {
-          // PROCESO ATÓMICO EN BACKEND (MODO INVITADO CON TARJETA)
+        let payload = {};
+        if (!Auth.isAuthenticated()) {
           const nombre   = document.getElementById('pay-nombre').value.trim();
           const rut      = document.getElementById('pay-rut').value.trim();
           const email    = document.getElementById('pay-email').value.trim();
@@ -884,49 +842,51 @@ function configurarEventosCarro() {
             fecha_fin:     it.fecha_fin
           }));
 
-          const payload = {
+          payload = {
             nombre_cliente:   nombre,
             rut_cliente:      rut,
             email_cliente:    email,
             telefono_cliente: telefono,
             items:            itemsPayload
           };
+        }
 
-          const resp = await apiFetch('/contratos/checkout-invitado/', {
-            method: 'POST',
-            body: JSON.stringify(payload)
-          });
-          const data = await resp.json();
+        const resp = await apiFetch('/webpay/iniciar/', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
 
-          if (resp.ok) {
-            if (modalPagoTarjetaBs) modalPagoTarjetaBs.hide();
+        if (resp.ok && data.url && data.token) {
+          btnSubmit.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Redirigiendo a Transbank...`;
+
+          if (!Auth.isAuthenticated()) {
             Cart.clearGuestCart();
-
-            const contratoCreado = data.contrato || data;
-            document.getElementById('modal-exito-numero').textContent = `#${contratoCreado.id || '001'}`;
-            document.getElementById('modal-exito-auth').textContent = 'TBK-' + Math.floor(100000 + Math.random() * 900000);
-            document.getElementById('modal-exito-total').textContent = formatCLP(contratoCreado.monto_total || carroActual.monto_total);
-
-            const btnRedir = document.getElementById('btn-exito-redireccion');
-            if (btnRedir) {
-              btnRedir.href = '/catalogo/';
-              btnRedir.innerHTML = `<i class="fa-solid fa-shapes me-1"></i>Volver al Catálogo`;
-            }
-
-            if (modalExitoArriendoBs) modalExitoArriendoBs.show();
-            await cargarCarro();
-          } else {
-            const errorMsg = data.error || data.detail || "No fue posible procesar el arriendo.";
-            showToast(errorMsg, "danger");
-            btnSubmit.disabled = false;
-            btnSubmit.innerHTML = `<i class="fa-solid fa-lock me-2"></i>Pagar Arriendo vía Webpay Plus`;
           }
+
+          const tbkForm = document.createElement('form');
+          tbkForm.method = 'POST';
+          tbkForm.action = data.url;
+
+          const tokenInput = document.createElement('input');
+          tokenInput.type = 'hidden';
+          tokenInput.name = 'token_ws';
+          tokenInput.value = data.token;
+
+          tbkForm.appendChild(tokenInput);
+          document.body.appendChild(tbkForm);
+          tbkForm.submit();
+        } else {
+          const errorMsg = data.error || data.detail || "No fue posible conectar con Transbank Webpay Plus.";
+          showToast(errorMsg, "danger");
+          btnSubmit.disabled = false;
+          btnSubmit.innerHTML = `<i class="fa-solid fa-arrow-up-right-from-square me-2"></i>Continuar a Transbank Webpay Plus`;
         }
       } catch (err) {
-        console.error("Error en checkout:", err);
-        showToast("Error de conexión al procesar el pago con la pasarela.", "danger");
+        console.error("Error en checkout Webpay:", err);
+        showToast("Error de conexión al iniciar pasarela Transbank.", "danger");
         btnSubmit.disabled = false;
-        btnSubmit.innerHTML = `<i class="fa-solid fa-lock me-2"></i>Pagar Arriendo vía Webpay Plus`;
+        btnSubmit.innerHTML = `<i class="fa-solid fa-arrow-up-right-from-square me-2"></i>Continuar a Transbank Webpay Plus`;
       }
     });
   }
