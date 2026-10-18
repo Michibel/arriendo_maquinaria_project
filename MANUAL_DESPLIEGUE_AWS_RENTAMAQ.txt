@@ -1,0 +1,177 @@
+# ==============================================================================
+# MANUAL OFICIAL DE DESPLIEGUE EN AWS EC2
+# Proyecto: RentaMaq Industrial - Arriendo de Maquinaria Pesada
+# Estudiante: Gabriel Michibel | Sección: IEC-N4-C1 | Año: 2026
+# Institución: Inacap Temuco - Ingeniería en Ciberseguridad
+# Pila Tecnológica: Ubuntu 22.04 LTS + PostgreSQL + Gunicorn + Nginx + DRF
+# ==============================================================================
+
+Este manual adapta paso a paso la "Receta AWS" oficial de Inacap específicamente para nuestro proyecto real de Arriendo de Maquinaria con base de datos PostgreSQL y frontend interactivo.
+
+--------------------------------------------------------------------------------
+PASO 1: DETENER EL PROYECTO ANTERIOR (TODOLIST) EN UBUNTU
+--------------------------------------------------------------------------------
+En tu terminal SSH de Ubuntu, primero detén y deshabilita el servicio anterior:
+
+sudo systemctl stop gunicorn
+sudo systemctl disable gunicorn
+sudo rm -f /etc/nginx/sites-enabled/todolist
+
+
+--------------------------------------------------------------------------------
+PASO 2: INSTALAR POSTGRESQL Y LIBRERÍAS DE DESARROLLO EN UBUNTU
+--------------------------------------------------------------------------------
+Nuestro proyecto requiere PostgreSQL nativo y sus dependencias de compilación:
+
+sudo apt update
+sudo apt install postgresql postgresql-contrib libpq-dev python3-dev -y
+
+Crear la base de datos y usuario de PostgreSQL en Ubuntu:
+
+sudo -u postgres psql -c "CREATE DATABASE arriendo_maquinaria_db;"
+sudo -u postgres psql -c "CREATE USER postgres WITH PASSWORD 'Lolito01';"
+sudo -u postgres psql -c "ALTER ROLE postgres SUPERUSER;"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE arriendo_maquinaria_db TO postgres;"
+
+
+--------------------------------------------------------------------------------
+PASO 3: CLONAR EL REPOSITORIO DE RENTAMAQ
+--------------------------------------------------------------------------------
+Vamos a alojar el proyecto en /home/ubuntu/rentamaq:
+
+cd /home/ubuntu
+git clone https://github.com/Michibel/arriendo_maquinaria_project.git rentamaq
+cd /home/ubuntu/rentamaq
+
+Crear y activar el entorno virtual con Python 3:
+
+python3 -m venv venv
+source venv/bin/activate
+
+Instalar las dependencias de producción:
+
+pip install --upgrade pip
+pip install -r requirements.txt
+pip install gunicorn psycopg2-binary requests
+
+
+--------------------------------------------------------------------------------
+PASO 4: MIGRACIONES, CARGA DE DATOS Y ESTÁTICOS
+--------------------------------------------------------------------------------
+Con el entorno virtual activo (venv):
+
+# 1. Aplicar migraciones en PostgreSQL
+python manage.py migrate
+
+# 2. Cargar los datos semilla (usuarios, categorías y maquinarias pesadas)
+python manage.py seed_data
+
+# 3. Recopilar archivos estáticos (CSS industrial, JS, logos e íconos)
+python manage.py collectstatic --noinput
+
+
+--------------------------------------------------------------------------------
+PASO 5: CONFIGURAR EL SERVICIO GUNICORN (SYSTEMD)
+--------------------------------------------------------------------------------
+Crea el archivo de servicio para RentaMaq:
+
+sudo nano /etc/systemd/system/rentamaq.service
+
+Pega este contenido exactamente:
+
+[Unit]
+Description=Gunicorn daemon para RentaMaq Industrial
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/rentamaq
+ExecStart=/home/ubuntu/rentamaq/venv/bin/gunicorn --workers 3 --bind unix:/home/ubuntu/rentamaq/rentamaq.sock arriendo_maquinaria_project.wsgi:application
+
+[Install]
+WantedBy=multi-user.target
+
+(Guarda con Ctrl + O, presiona Enter, y sal con Ctrl + X).
+
+Iniciar y habilitar el servicio:
+
+sudo systemctl daemon-reload
+sudo systemctl start rentamaq
+sudo systemctl enable rentamaq
+sudo systemctl status rentamaq
+
+
+--------------------------------------------------------------------------------
+PASO 6: CONFIGURAR PERMISOS DEL SOCKET Y CARPETAS
+--------------------------------------------------------------------------------
+Para garantizar que Nginx (usuario www-data) pueda acceder sin error 502:
+
+sudo usermod -aG www-data ubuntu
+sudo chmod 755 /home/ubuntu
+sudo chmod 755 /home/ubuntu/rentamaq
+sudo chmod -R 755 /home/ubuntu/rentamaq/staticfiles
+sudo chown ubuntu:www-data /home/ubuntu/rentamaq/rentamaq.sock
+sudo chmod 660 /home/ubuntu/rentamaq/rentamaq.sock
+
+
+--------------------------------------------------------------------------------
+PASO 7: CONFIGURAR NGINX COMO PROXY INVERSO
+--------------------------------------------------------------------------------
+Crea el bloque de configuración para RentaMaq:
+
+sudo nano /etc/nginx/sites-available/rentamaq
+
+Pega el siguiente contenido:
+
+server {
+    listen 80;
+    server_name _;
+
+    # Servir archivos estáticos recolectados (Bootstrap, styles.css, JS de la app)
+    location /static/ {
+        alias /home/ubuntu/rentamaq/staticfiles/;
+    }
+
+    # Proxy inverso hacia el socket de Gunicorn
+    location / {
+        proxy_pass http://unix:/home/ubuntu/rentamaq/rentamaq.sock;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    error_log /var/log/nginx/rentamaq_error.log;
+    access_log /var/log/nginx/rentamaq_access.log;
+}
+
+(Guarda con Ctrl + O, presiona Enter, y sal con Ctrl + X).
+
+Activar el sitio en Nginx y reiniciar:
+
+sudo ln -s /etc/nginx/sites-available/rentamaq /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+sudo systemctl restart rentamaq
+
+
+--------------------------------------------------------------------------------
+PASO 8: ¡PROBAR TU PLATAFORMA EN VIVO EN EL NAVEGADOR!
+--------------------------------------------------------------------------------
+Abre tu navegador e ingresa directamente a tu IP de AWS:
+
+1. Catálogo Principal y Hero Industrial:
+   http://34.206.232.111/
+
+2. Carro de Arriendo y Pago Webpay Plus:
+   http://34.206.232.111/carro/
+
+3. Dashboard Ejecutivo (Gráficos Chart.js):
+   http://34.206.232.111/panel/
+
+4. Documentación Swagger OpenAPI 3.0:
+   http://34.206.232.111/api/docs/
+
+5. Panel Administrativo Django:
+   http://34.206.232.111/admin/
